@@ -4,6 +4,8 @@ import com.tienda.ecommerce.common.BadRequestException;
 import com.tienda.ecommerce.common.RecursoNoEncontradoException;
 import com.tienda.ecommerce.producto.dto.CategoriaRequest;
 import com.tienda.ecommerce.producto.dto.CategoriaResponse;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,7 @@ public class CategoriaServiceImpl implements CategoriaService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "categorias", key = "'todas'")
     public List<CategoriaResponse> listarTodas() {
         return categoriaRepository.findAll().stream()
                 .map(this::mapearADto)
@@ -28,6 +31,7 @@ public class CategoriaServiceImpl implements CategoriaService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "categorias", key = "#id")
     public CategoriaResponse obtenerPorId(Long id) {
         Categoria categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Categoría no encontrada con id: " + id));
@@ -36,6 +40,7 @@ public class CategoriaServiceImpl implements CategoriaService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "categorias", allEntries = true)
     public CategoriaResponse crear(CategoriaRequest request) {
         if (categoriaRepository.existsByNombreIgnoreCase(request.getNombre().trim())) {
             throw new BadRequestException("Ya existe una categoría con el nombre: " + request.getNombre());
@@ -49,6 +54,7 @@ public class CategoriaServiceImpl implements CategoriaService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "categorias", allEntries = true)
     public CategoriaResponse actualizar(Long id, CategoriaRequest request) {
         Categoria categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Categoría no encontrada con id: " + id));
@@ -66,6 +72,7 @@ public class CategoriaServiceImpl implements CategoriaService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "categorias", allEntries = true)
     public void eliminar(Long id) {
         if (!categoriaRepository.existsById(id)) {
             throw new RecursoNoEncontradoException("Categoría no encontrada con id: " + id);
