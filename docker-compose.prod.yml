@@ -1,0 +1,122 @@
+services:
+  ecommerce-postgres:
+    image: postgres:16-alpine
+    container_name: electronix-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Define POSTGRES_DB en .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Define POSTGRES_USER en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+    volumes:
+      - electronix_postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.10"
+          memory: 128M
+    networks:
+      - electronix-internal
+
+  ecommerce-redis:
+    image: redis:7-alpine
+    container_name: electronix-redis-prod
+    restart: always
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Define REDIS_PASSWORD en .env}"]
+    volumes:
+      - electronix_redis_prod_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?Define REDIS_PASSWORD en .env}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+    networks:
+      - electronix-internal
+
+  ecommerce-app:
+    image: electronix-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: electronix-app-prod
+    restart: always
+    depends_on:
+      ecommerce-postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://ecommerce-postgres:5432/${POSTGRES_DB:?Define POSTGRES_DB en .env}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:?Define POSTGRES_USER en .env}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en .env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-Admin@gmail.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-true}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "false"
+      APP_UPLOAD_DIR: /app/uploads
+      SPRING_DATA_REDIS_HOST: ecommerce-redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?Define REDIS_PASSWORD en .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:80,http://localhost:8090,https://electronix.tudominio.com}
+    volumes:
+      - electronix_uploads_prod:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 768M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    networks:
+      - electronix-internal
+
+  ecommerce-nginx:
+    image: nginx:alpine
+    container_name: electronix-nginx-prod
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      ecommerce-app:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+    networks:
+      - electronix-internal
+
+networks:
+  electronix-internal:
+    driver: bridge
+
+volumes:
+  electronix_postgres_prod_data:
+  electronix_uploads_prod:
+  electronix_redis_prod_data:
