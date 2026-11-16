@@ -7,6 +7,8 @@ import com.tienda.ecommerce.producto.dto.ProductoRequest;
 import com.tienda.ecommerce.producto.dto.ProductoResponse;
 import com.tienda.ecommerce.reporte.dto.ProductoBajoStockDTO;
 import com.tienda.ecommerce.configuracion.MonedaRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,7 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "productos", key = "#id")
     public ProductoResponse obtenerPorIdPublico(Long id) {
         Producto producto = productoRepository.findByIdAndActivoTrue(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Producto no encontrado o no disponible con id: " + id));
@@ -68,6 +71,7 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "productos", allEntries = true)
     public ProductoResponse crear(ProductoRequest request) {
         Categoria categoria = categoriaRepository.findById(request.getCategoriaId())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Categoría no encontrada con id: " + request.getCategoriaId()));
@@ -96,6 +100,7 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "productos", key = "#id")
     public ProductoResponse actualizar(Long id, ProductoRequest request) {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Producto no encontrado con id: " + id));
@@ -132,6 +137,7 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "productos", key = "#id")
     public void eliminar(Long id) {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Producto no encontrado con id: " + id));

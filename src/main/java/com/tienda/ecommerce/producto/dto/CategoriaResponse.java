@@ -1,6 +1,10 @@
 package com.tienda.ecommerce.producto.dto;
 
-public class CategoriaResponse {
+import java.io.Serializable;
+
+public class CategoriaResponse implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long id;
     private String nombre;

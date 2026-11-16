@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: electronix
+  labels:
+    app.kubernetes.io/name: electronix
+    app.kubernetes.io/part-of: electronix-cloud
