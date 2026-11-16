@@ -62,6 +62,23 @@ public class SecurityConfig {
                         // Endpoints públicos de autenticación
                         .requestMatchers("/api/auth/**").permitAll()
 
+                        // Endpoints de salud para orquestadores y balanceadores (Liveness / Readiness)
+                        .requestMatchers(
+                                "/actuator/health",
+                                "/actuator/health/**"
+                        ).permitAll()
+
+                        // Endpoints de métricas, info y Prometheus restringidos a roles administrativos
+                        .requestMatchers(
+                                "/actuator/info",
+                                "/actuator/prometheus",
+                                "/actuator/metrics",
+                                "/actuator/metrics/**"
+                        ).hasAuthority("CONFIGURACION_GESTIONAR")
+
+                        // Cualquier otro endpoint de actuator denegado por defecto
+                        .requestMatchers("/actuator/**").denyAll()
+
                         // Endpoints públicos de catálogo
                         .requestMatchers(HttpMethod.GET, "/api/categorias/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/pagos/metodos").permitAll()
@@ -97,7 +114,10 @@ public class SecurityConfig {
         configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
+        
+        // Evitar que el comodín universal (*) se combine con credenciales (SEC-02)
+        boolean hasBroadWildcard = origins.stream().anyMatch(o -> o.equals("*"));
+        configuration.setAllowCredentials(!hasBroadWildcard);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
