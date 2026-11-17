@@ -4,6 +4,27 @@ import { api } from './api.js';
 import { auth } from './auth.js';
 import { showToast } from './ui/toast.js';
 
+// Carga dinámica: inyecta un <script> solo si el global no existe aún
+function _loadScript(src) {
+    return new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error(`No se pudo cargar: ${src}`));
+        document.head.appendChild(s);
+    });
+}
+
+async function _ensureWebSocketLibs() {
+    if (typeof SockJS === 'undefined') {
+        await _loadScript('/assets/js/vendor/sockjs.min.js');
+    }
+    if (typeof Stomp === 'undefined') {
+        await _loadScript('/assets/js/vendor/stomp.min.js');
+    }
+}
+
 export class ChatClient {
     constructor() {
         this.stompClient = null;
@@ -15,6 +36,9 @@ export class ChatClient {
     async conectar(conversacionId, onMessageReceived) {
         this.conversacionId = conversacionId;
         this.onMessageReceivedCallback = onMessageReceived;
+
+        // Garantizar que SockJS y StompJS estén disponibles antes de conectar
+        await _ensureWebSocketLibs();
 
         return new Promise((resolve, reject) => {
             if (typeof SockJS === 'undefined' || typeof Stomp === 'undefined') {

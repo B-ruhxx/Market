@@ -79,7 +79,7 @@
 .store-footer-intro p { margin: 0; color: #626972; font-size: 12px; line-height: 1.8; }
 .store-footer-intro .store-text-link { margin-left: auto; min-height: 40px; color: var(--store-ink); font-size: 11px; font-weight: 500; }
 .fx-footer .fx-dir-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; padding: 30px 0; }
-.fx-footer .fx-dir-group h3 { color: var(--store-ink); font-family: var(--store-font); font-size: 11px; font-weight: 600; }
+.fx-footer .fx-dir-group h3, .fx-footer .fx-dir-group .fx-dir-heading { color: var(--store-ink); font-family: var(--store-font); font-size: 11px; font-weight: 600; }
 .fx-footer .fx-dir-col a { color: #59616a; font-family: var(--store-font); font-size: 11px; }
 .fx-footer .fx-dir-col a:hover { color: var(--store-accent); }
 .fx-footer .fx-dir-group li + li { margin-top: 7px; }

@@ -41,7 +41,7 @@ const footerContent = `
         <nav class="fx-dir-grid" aria-label="Directorio de la tienda">
             ${gruposFooter.map(([titulo, enlaces]) => `
                 <div class="fx-dir-col"><details class="fx-dir-group" open>
-                    <summary><h3>${titulo}</h3></summary>
+                    <summary><span class="fx-dir-heading">${titulo}</span></summary>
                     <ul>${enlaces.map(([texto, url]) => `<li><a href="${url}">${texto}</a></li>`).join('')}</ul>
                 </details></div>`).join('')}
         </nav>
