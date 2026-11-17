@@ -1,57 +1,65 @@
 import { auth } from '/assets/js/auth.js';
-        import { renderNavbar } from '/assets/js/ui/navbar.js';
+import { iniciarShellCompra } from '/assets/js/ui/purchase-shell.js';
+import { retornoSeguro } from '/assets/js/purchase-flow.js';
 
-        renderNavbar();
+await iniciarShellCompra();
 
-        const form = document.getElementById('login-form');
-        const emailInput = document.getElementById('login-email');
-        const passInput = document.getElementById('login-password');
-        const rememberInput = document.getElementById('login-remember');
-        const submitBtn = document.getElementById('btn-submit-login');
-        const passwordToggle = document.getElementById('login-password-toggle');
-        const passwordIcon = document.getElementById('login-password-icon');
+const form = document.getElementById('login-form');
+const email = document.getElementById('login-email');
+const password = document.getElementById('login-password');
+const remember = document.getElementById('login-remember');
+const submit = document.getElementById('btn-submit-login');
+const toggle = document.getElementById('login-password-toggle');
+const icon = document.getElementById('login-password-icon');
+const error = document.getElementById('login-error');
+let ocupado = false;
+const ojo = '<path d="M2.25 12s3.5-6 9.75-6 9.75 6 9.75 6-3.5 6-9.75 6-9.75-6-9.75-6Z"/><circle cx="12" cy="12" r="2.5"/>';
+const ojoCerrado = '<path d="m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.2A10.8 10.8 0 0 1 12 5c6.25 0 9.75 7 9.75 7a18.4 18.4 0 0 1-3.2 3.9M6.1 6.1A18.7 18.7 0 0 0 2.25 12S5.75 19 12 19c1.25 0 2.37-.28 3.35-.72"/>';
 
-        passwordToggle.addEventListener('click', () => {
-            const visible = passInput.type === 'text';
-            passInput.type = visible ? 'password' : 'text';
-            passwordToggle.setAttribute('aria-pressed', String(!visible));
-            passwordToggle.setAttribute('aria-label', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
-            passwordToggle.title = visible ? 'Mostrar contraseña' : 'Ocultar contraseña';
-            passwordIcon.innerHTML = visible
-                ? `<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.5-6 9.75-6 9.75 6 9.75 6-3.5 6-9.75 6-9.75-6-9.75-6Z" /><circle cx="12" cy="12" r="2.5" />`
-                : `<path stroke-linecap="round" stroke-linejoin="round" d="m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.2A10.8 10.8 0 0 1 12 5c6.25 0 9.75 7 9.75 7a18.4 18.4 0 0 1-3.2 3.9M6.1 6.1A18.7 18.7 0 0 0 2.25 12S5.75 19 12 19c1.25 0 2.37-.28 3.35-.72" />`;
-        });
+function mostrarPassword(visible) {
+    password.type = visible ? 'text' : 'password';
+    toggle.setAttribute('aria-pressed', String(visible));
+    toggle.setAttribute('aria-label', visible ? 'Ocultar contraseña' : 'Mostrar contraseña');
+    toggle.title = toggle.getAttribute('aria-label');
+    icon.innerHTML = visible ? ojoCerrado : ojo;
+}
+toggle.addEventListener('click', () => mostrarPassword(password.type === 'password'));
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `
-                <div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                <span>Ingresando...</span>
-            `;
+// Conservar la limpieza explícita de datos sensibles tras cerrar sesión,
+// incluso cuando el navegador restaura el formulario desde su caché.
+const desdeLogout = new URLSearchParams(location.search).get('logout') === '1';
+function limpiarLogout() {
+    if (!desdeLogout) return;
+    form.reset();
+    email.value = '';
+    password.value = '';
+    remember.checked = false;
+    mostrarPassword(false);
+    history.replaceState(null, '', '/login.html');
+}
+limpiarLogout();
+window.addEventListener('pageshow', limpiarLogout);
+setTimeout(limpiarLogout, 100);
+submit.disabled = false;
 
-            try {
-                const email = emailInput.value.trim();
-                const pass = passInput.value;
-                const persistir = rememberInput.checked;
-
-                const usuario = await auth.login(email, pass, persistir);
-
-                const params = new URLSearchParams(window.location.search);
-                const redirect = params.get('redirect');
-
-                setTimeout(() => {
-                    if (redirect) {
-                        window.location.href = redirect;
-                    } else if (auth.isAdmin()) {
-                        window.location.href = auth.inicioAdmin();
-                    } else {
-                        window.location.href = '/index.html';
-                    }
-                }, 700);
-
-            } catch (err) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = `<span>Iniciar Sesión</span>`;
-            }
-        });
+form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (ocupado || !form.reportValidity()) return;
+    ocupado = true;
+    submit.disabled = true;
+    submit.setAttribute('aria-busy', 'true');
+    submit.textContent = 'Ingresando…';
+    error.hidden = true;
+    try {
+        await auth.login(email.value.trim(), password.value, remember.checked);
+        const destino = retornoSeguro(new URLSearchParams(location.search).get('redirect'), location.origin);
+        location.href = destino || (auth.isAdmin() ? auth.inicioAdmin() : '/index.html');
+    } catch (err) {
+        error.textContent = err.message || 'No pudimos iniciar sesión. Inténtalo nuevamente.';
+        error.hidden = false;
+        ocupado = false;
+        submit.disabled = false;
+        submit.removeAttribute('aria-busy');
+        submit.textContent = 'Iniciar sesión';
+    }
+});

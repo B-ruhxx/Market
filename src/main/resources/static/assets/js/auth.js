@@ -103,7 +103,7 @@ export const auth = {
         showToast('Sesión cerrada correctamente', 'info');
         if (redirigir) {
             setTimeout(() => {
-                window.location.href = '/login.html';
+                window.location.replace('/login.html?logout=1');
             }, 500);
         }
     },
@@ -131,7 +131,7 @@ export const auth = {
         if (!this.isAuthenticated()) {
             showToast('Debes iniciar sesión para acceder a esta sección', 'warning');
             setTimeout(() => {
-                window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
             }, 800);
             return false;
         }

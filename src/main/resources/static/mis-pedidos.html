@@ -4,162 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/svg+xml" href="/assets/img/logo.svg">
-    <title>Mis Pedidos — ELECTRONIX</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Mis pedidos — ELECTRONIX</title>
+    <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/assets/css/output.css">
-    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <link rel="stylesheet" href="/assets/css/ui/ui-inline.css">
-    <link rel="stylesheet" href="/assets/css/pages/figma-home.css">
-    <link rel="stylesheet" href="/assets/css/pages/mis-pedidos-timeline.css">
+    <link rel="stylesheet" href="/assets/css/pages/figma-home.css?v=4">
+    <link rel="stylesheet" href="/assets/css/storefront.css?v=4">
+    <link rel="stylesheet" href="/assets/css/pages/purchase-flow.css?v=1">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js" defer></script>
 </head>
-<body class="bg-[#ededed] text-neutral-800 min-h-screen flex flex-col antialiased">
-
-    <!-- header nuevo estilo: franja azul + navbar blanca estilo Apple -->
-    <header id="main-navbar">
-        <div class="fx-topbar">
-            <a href="/index.html" class="fx-brand" title="ELECTRONIX">
-                <img src="/assets/img/logo.svg" alt="Electronix" class="fx-brand-logo">
-                <span>ELECTRONIX</span>
-            </a>
+<body class="storefront-flow">
+    <a class="store-skip-link" href="#pedidos">Saltar a mis pedidos</a>
+    <header id="main-navbar" class="store-header"><div class="fx-topbar"><a href="/index.html" class="fx-brand"><img src="/assets/img/logo.svg" alt="Electronix" class="fx-brand-logo"><span>ELECTRONIX</span></a></div></header>
+    <main id="pedidos" class="store-container flow-main">
+        <nav class="flow-breadcrumb" aria-label="Ruta de navegación"><a href="/index.html">Inicio</a><span aria-hidden="true">/</span><span aria-current="page">Mis pedidos</span></nav>
+        <header class="flow-heading"><div><p class="store-eyebrow">Cada paso de tu compra</p><h1>Tu pedido, más cerca.</h1><p>Consulta tus compras y el estado registrado por la tienda.</p></div><a href="/informacion.html#chat" class="store-text-link">¿Necesitas ayuda?</a></header>
+        <div class="flow-orders-toolbar">
+            <label for="orders-filter">Mostrar <select id="orders-filter"><option value="todos">Todos los pedidos</option><option value="activos">En curso</option><option value="entregados">Entregados</option><option value="cancelados">Cancelados</option></select></label>
+            <button type="button" id="orders-refresh" class="flow-link">Actualizar pedidos</button>
         </div>
-
-        <nav class="fx-navbar">
-            <div class="fx-container fx-navbar-inner">
-                <div class="fx-nav-left"></div>
-
-                <div class="fx-nav-center">
-                    <div class="fx-dropdown-wrapper" id="nav-cat-wrap">
-                        <button type="button" id="nav-cat-trigger" class="fx-nav-link fx-dropdown-trigger" aria-haspopup="true" aria-expanded="false">
-                            <span>Categorías</span>
-                            <svg class="fx-chevron" width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    <a href="/productos.html?ofertas=true" class="fx-nav-link">Ofertas</a>
-                    <a href="/productos.html" class="fx-nav-link">Productos</a>
-                </div>
-
-                <div class="fx-nav-right">
-                    <button type="button" id="nav-search-toggle" class="fx-search-btn" title="Buscar" aria-label="Buscar">
-                        <img src="/assets/img/busquedaicon.svg" alt="Buscar">
-                    </button>
-
-                    <a href="/carrito.html" class="fx-cart-btn" title="Ver carrito" aria-label="Ver carrito">
-                        <img src="/assets/img/carritoicon.svg" alt="Carrito">
-                        <span id="cart-badge-top" class="fx-cart-count is-hidden">0</span>
-                    </a>
-
-                    <div class="fx-country" id="nav-country">
-                        <button type="button" id="nav-country-btn" aria-haspopup="true" aria-expanded="false" title="Perú">
-                            <img id="nav-country-flag" src="https://flagcdn.com/pe.svg" alt="Perú">
-                            <span id="nav-country-code">PE</span>
-                        </button>
-                        <div id="nav-country-menu" role="menu" aria-label="Seleccionar país"></div>
-                    </div>
-
-                    <span id="nav-auth-container">
-                        <a href="/login.html" id="nav-login-btn" class="fx-login">Ingresar</a>
-                    </span>
-                </div>
-            </div>
-
-            <div id="nav-mega" class="fx-mega" aria-hidden="true">
-                <div class="fx-container fx-mega-inner">
-                    <div class="fx-mega-col">
-                        <p class="fx-mega-kicker">Explorar</p>
-                        <div id="nav-categories-dropdown" class="fx-mega-biglinks">
-                            <a href="/index.html">Todas las categorías</a>
-                            <a href="/productos.html?categoria=Televisores">Televisores</a>
-                            <a href="/productos.html?categoria=Smartphones">Smartphones</a>
-                            <a href="/productos.html?categoria=Laptops">Portátiles</a>
-                            <a href="/productos.html?categoria=Audio">Equipo de Sonido</a>
-                            <a href="/productos.html?categoria=Accesorios">Accesorios y PC</a>
-                        </div>
-                        <div class="fx-mega-foot">
-                            <a href="/productos.html">Ver todos los productos</a>
-                            <a href="/productos.html?ofertas=true">Ofertas de hoy</a>
-                        </div>
-                    </div>
-                    <div class="fx-mega-col">
-                        <p class="fx-mega-kicker">Más de Electronix</p>
-                        <div class="fx-mega-smalllinks">
-                            <a href="/productos.html?ofertas=true">Ofertas</a>
-                            <a href="/productos.html">Más vendidos</a>
-                            <a href="/productos.html">Recomendados</a>
-                            <a href="/productos.html">Nuestras tiendas</a>
-                            <a href="/productos.html">Soporte</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="nav-search-panel" class="fx-search-panel" aria-hidden="true">
-                <div class="fx-container fx-search-panel-inner">
-                    <form id="nav-search-form" action="/productos.html" method="GET" role="search">
-                        <img src="/assets/img/busquedaicon.svg" alt="" aria-hidden="true">
-                        <input id="nav-search-input" type="text" name="q" placeholder="Buscar en Electronix"
-                            autocomplete="off" aria-label="Buscar en Electronix">
-                        <button type="button" id="nav-search-close" title="Cerrar" aria-label="Cerrar búsqueda">
-                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
-                    </form>
-                    <p class="fx-mega-kicker">Enlaces rápidos</p>
-                    <div class="fx-quick">
-                        <a href="/productos.html?ofertas=true"><span aria-hidden="true">→</span> Ofertas</a>
-                        <a href="/productos.html?categoria=Televisores"><span aria-hidden="true">→</span> Televisores</a>
-                        <a href="/productos.html?categoria=Smartphones"><span aria-hidden="true">→</span> Smartphones</a>
-                        <a href="/productos.html?categoria=Laptops"><span aria-hidden="true">→</span> Portátiles</a>
-                        <a href="/productos.html?categoria=Audio"><span aria-hidden="true">→</span> Equipo de Sonido</a>
-                    </div>
-                </div>
-            </div>
-        </nav>
-        <div id="nav-backdrop" class="fx-backdrop"></div>
-    </header>
-
-    <main class="max-w-6xl mx-auto px-4 sm:px-8 py-8 flex-1 w-full">
-        <div class="mb-6">
-            <h1 class="font-['Montserrat',sans-serif] text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight uppercase>Historial de Mis Pedidos</h1>
-            <p class="text-xs text-neutral-500 mt-1">Consulta el progreso, estado de entrega y detalles de tus compras en Electronix</p>
-        </div>
-
-        <div id="orders-container" class="space-y-4">
-            <div class="py-16 text-center text-neutral-400 bg-white rounded-2xl border border-neutral-200">
-                <div class="w-10 h-10 border-4 border-[#3564C9]/30 border-t-[#3564C9] rounded-full animate-spin mx-auto mb-4"></div>
-                <p class="text-sm font-semibold">Cargando tu historial de compras...</p>
-            </div>
-        </div>
+        <p id="orders-feedback" class="flow-message" role="status" aria-live="polite"></p>
+        <p id="orders-updated" class="flow-updated" role="status"></p>
+        <div id="orders-container" aria-busy="true"><div class="flow-state" role="status"><p>Estamos buscando tus pedidos…</p></div></div>
+        <noscript><p class="flow-message">Activa JavaScript para consultar los pedidos de tu cuenta.</p></noscript>
     </main>
-
-    <div id="order-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-950/70 backdrop-blur-md">
-        <div class="bg-white w-full max-w-3xl rounded-2xl border border-neutral-200 shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-start border-b border-neutral-200 pb-4 mb-5 gap-3">
-                <div class="min-w-0">
-                    <h3 id="modal-order-title" class="text-lg font-black text-neutral-900 uppercase">Detalle de Pedido</h3>
-                    <span id="modal-order-date" class="text-xs text-neutral-500 block"></span>
-                    <div id="modal-order-badges" class="flex flex-wrap gap-2 mt-2"></div>
-                </div>
-                <button id="modal-close-btn" class="text-neutral-400 hover:text-neutral-700 p-1 rounded-lg flex-shrink-0">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-
-            <div id="modal-order-timeline" class="mb-5"></div>
-
-            <div id="modal-order-content" class="space-y-4 text-sm">
-            </div>
-        </div>
-    </div>
-
-    <footer class="border-t border-neutral-200 bg-white py-6 text-center text-xs text-neutral-500 mt-auto">
-        <p>© 2026 ELECTRONIX. Todos los derechos reservados.</p>
-    </footer>
-
-    <script src="/assets/js/ui/fx-header.js"></script>
-    <script type="module" src="/assets/js/pages/mis-pedidos.js"></script>
+    <footer data-site-footer></footer>
+    <script type="module" src="/assets/js/pages/mis-pedidos.js?v=2"></script>
 </body>
 </html>

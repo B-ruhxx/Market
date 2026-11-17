@@ -2,7 +2,10 @@
 import { auth } from '/assets/js/auth.js';
 import { renderAdminShell } from '/assets/js/ui/adminShell.js?v=2';
 import { showToast } from '/assets/js/ui/toast.js';
-import { limpiarCacheSitio } from '/assets/js/sitio.js?v=5';
+import { limpiarCacheSitio } from '/assets/js/sitio.js?v=6';
+import { resolverBanners } from '/assets/js/home-banners.js';
+import { resolverHero, resolverAccesos, resolverEquipos } from '/assets/js/home-content.js';
+import { resolverInspiracion } from '/assets/js/home-stories.js';
 
 renderAdminShell('apariencia');
 
@@ -30,8 +33,10 @@ const EDITORES = {
         campos: [
             { k: 'titulo', label: 'Título grande', tipo: 'text', ph: 'Ej. SUPER OFERTAS' },
             { k: 'subtitulo', label: 'Subtítulo', tipo: 'text', ph: 'Ej. ESPECIALES' },
+            { k: 'descripcion', label: 'Descripción breve', tipo: 'textarea', ph: 'Una frase para presentar la campaña.' },
             { k: 'fondoTipo', label: 'Fondo', tipo: 'select', opciones: [['imagen', 'Imagen'], ['color', 'Color sólido'], ['degradado', 'Degradado']] },
             { k: 'imagen', label: 'Imagen (URL, solo si fondo es imagen)', tipo: 'url', ph: 'https://…' },
+            { k: 'imagenModo', label: 'Presentación de la imagen', tipo: 'select', opciones: [['ambiente', 'Ambiente / texto integrado a la derecha'], ['fondo', 'Fotografía con texto centrado'], ['producto', 'Producto sin fondo']] },
             { k: 'fondoColor1', label: 'Color / inicio del degradado', tipo: 'color' },
             { k: 'fondoColor2', label: 'Fin del degradado', tipo: 'color' },
             { k: 'mostrarTexto', label: 'Mostrar texto sobre el fondo', tipo: 'check' },
@@ -69,15 +74,18 @@ const EDITORES = {
     banners: {
         titulo: 'Banner',
         lista: 'banners',
-        contar: null,
+        contar: 'ap-banners-count',
         campos: [
             { k: 'etiqueta', label: 'Etiqueta superior', tipo: 'text', ph: 'Ej. ¡COMPRA AHORA!' },
             { k: 'titulo', label: 'Título', tipo: 'text', ph: 'Ej. LO MEJOR EN HARDWARE Y GAMING' },
             { k: 'descripcion', label: 'Descripción (vacío = sin texto)', tipo: 'textarea', ph: 'Ej. Encuentra periféricos…' },
             { k: 'boton', label: 'Texto del botón', tipo: 'text', ph: 'Ej. Ver más' },
             { k: 'linkUrl', label: 'Destino', tipo: 'text', ph: 'Ej. /productos.html' },
-            { k: 'imagen', label: 'Imagen', tipo: 'media', variante: 'fondo', textoCambiar: 'Cambiar imagen', ph: 'https://… o /uploads/xxx.jpg' },
-            { k: 'estilo', label: 'Estilo', tipo: 'select', opciones: [['oscuro', 'Oscuro (grande)'], ['azul', 'Azul (lateral)']] },
+            { k: 'botonSecundario', label: 'Segundo botón (opcional)', tipo: 'text', ph: 'Ej. Ver ofertas' },
+            { k: 'linkSecundario', label: 'Destino del segundo botón', tipo: 'text', ph: 'Ej. /productos.html?ofertas=true' },
+            { k: 'imagen', label: 'Imagen', tipo: 'media', variante: 'fondo', textoCambiar: 'Cambiar imagen', ph: 'https://… o /uploads/xxx.png' },
+            { k: 'estilo', label: 'Fondo del bloque', tipo: 'select', opciones: [['oscuro', 'Negro'], ['azul', 'Azul suave'], ['claro', 'Gris claro']] },
+            { k: 'encuadre', label: 'Presentación de la imagen', tipo: 'select', opciones: [['foto', 'Fotografía a todo el ancho'], ['producto', 'Producto completo (PNG o WEBP sin fondo)']] },
             { k: 'textoAlinear', label: 'Posición del texto', tipo: 'select', opciones: [['centro', 'Centrado'], ['izq', 'Izquierda']] },
             { k: 'etiquetaTam', label: 'Etiqueta · tamaño px (vacío = normal)', tipo: 'text', ph: 'Ej. 12' },
             { k: 'tituloTam', label: 'Título · tamaño px (vacío = normal)', tipo: 'text', ph: 'Ej. 28' },
@@ -94,7 +102,8 @@ const EDITORES = {
             { k: 'descripcion', label: 'Descripción', tipo: 'textarea', ph: 'Ej. Arma tu setup…' },
             { k: 'boton', label: 'Texto del botón', tipo: 'text', ph: 'Ej. Ver colección' },
             { k: 'linkUrl', label: 'Destino', tipo: 'text', ph: 'Ej. /productos.html' },
-            { k: 'imagen', label: 'Imagen (URL)', tipo: 'url', ph: 'https://…' }
+            { k: 'imagen', label: 'Fotografía', tipo: 'media', variante: 'fondo', textoCambiar: 'Cambiar fotografía', ph: 'https://… o /uploads/xxx.webp' },
+            { k: 'imagenAlt', label: 'Descripción accesible de la fotografía', tipo: 'text', ph: 'Describe brevemente lo que aparece en la imagen.' }
         ]
     }
 };
@@ -262,12 +271,12 @@ async function initApariencia() {
             refrescarColor('secundario', cfg['tema.secundario'] || '#000000');
             document.getElementById('ap-equipos-titulo').value = cfg['home.equipos.titulo'] || '';
 
-            estado.hero = leerJSON(cfg['hero.slides'], []);
-            estado.cards = leerJSON(cfg['home.cards'], []);
-            estado.equipos = leerJSON(cfg['home.equipos'], []);
+            estado.hero = resolverHero(leerJSON(cfg['hero.slides'], null));
+            estado.cards = resolverAccesos(leerJSON(cfg['home.cards'], null));
+            estado.equipos = resolverEquipos(leerJSON(cfg['home.equipos'], null));
             estado.equiposTitulo = cfg['home.equipos.titulo'] || '';
-            estado.banners = leerJSON(cfg['home.banners'], []);
-            estado.spot = leerJSON(cfg['home.spotlight'], []);
+            estado.banners = resolverBanners(leerJSON(cfg['home.banners'], null));
+            estado.spot = resolverInspiracion(leerJSON(cfg['home.spotlight'], null));
 
             repintarTodo();
         }

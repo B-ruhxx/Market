@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480" fill="none">
+  <title>AutoCAD LT. Ilustración de licencia de software.</title>
+  <path d="M229 224h182M250 244V73M390 244V73" stroke="#d7d0cd" stroke-width="2"/>
+  <path d="m268 221 52-133 52 133M286 177h68" stroke="#a94c45" stroke-width="14" stroke-linecap="square" stroke-linejoin="miter"/>
+  <text x="320" y="291" text-anchor="middle" fill="#6b6562" font-family="Arial,sans-serif" font-size="14" letter-spacing="3">AUTODESK</text>
+  <text x="320" y="346" text-anchor="middle" fill="#343434" font-family="Arial,sans-serif" font-size="43" font-weight="500">AutoCAD LT</text>
+  <text x="320" y="403" text-anchor="middle" fill="#74706d" font-family="Arial,sans-serif" font-size="13" letter-spacing="3">SOFTWARE · 1 AÑO</text>
+</svg>

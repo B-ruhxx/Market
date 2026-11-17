@@ -6,6 +6,7 @@ import { renderPager, swapSuave } from '/assets/js/ui/pager.js?v=2';
 
 const tbody = document.getElementById('usuarios-table-body');
 const pager = document.getElementById('usuarios-pager');
+const tableWrap = tbody.closest('.adm-table-wrap');
 const filtroRol = document.getElementById('filtro-rol');
 const filtroBuscar = document.getElementById('filtro-buscar');
 const btnNuevo = document.getElementById('btn-nuevo-usuario');
@@ -14,10 +15,11 @@ const modalClose = document.getElementById('modal-usr-close');
 const modalCancel = document.getElementById('modal-usr-cancel');
 const formNuevo = document.getElementById('form-nuevo-usuario');
 
-const TAMANO_PAGINA = 10;
+let TAMANO_PAGINA = 10;
 let paginaActual = 0;
 let todosUsuarios = [];
 let rolesDisponibles = [];
+let temporizadorResize;
 
 renderAdminShell('usuarios');
 
@@ -58,6 +60,29 @@ async function initUsuariosAdmin() {
     if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) cerrarModal(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) cerrarModal(); });
     if (formNuevo) formNuevo.addEventListener('submit', guardarUsuario);
+    window.addEventListener('resize', () => {
+        clearTimeout(temporizadorResize);
+        temporizadorResize = setTimeout(() => ajustarFilasAlViewport(), 150);
+    });
+}
+
+function filasPorViewport() {
+    if (!window.matchMedia('(min-width: 901px)').matches || !tableWrap) return 10;
+    const fila = tbody.querySelector('tr');
+    const cabecera = tableWrap.querySelector('thead');
+    if (!fila || !cabecera) return TAMANO_PAGINA;
+    const altoDisponible = tableWrap.clientHeight - cabecera.getBoundingClientRect().height;
+    const altoFila = Math.max(1, fila.getBoundingClientRect().height);
+    return Math.max(1, Math.min(50, Math.floor(altoDisponible / altoFila)));
+}
+
+function ajustarFilasAlViewport() {
+    const siguienteTamano = filasPorViewport();
+    if (siguienteTamano === TAMANO_PAGINA) return;
+    const primerRegistro = paginaActual * TAMANO_PAGINA;
+    TAMANO_PAGINA = siguienteTamano;
+    paginaActual = Math.floor(primerRegistro / TAMANO_PAGINA);
+    pintar();
 }
 function opcionesRoles(actual) {
     return rolesDisponibles.map(r => `<option value="${esc(r.codigo)}"${r.codigo===actual?' selected':''}${!r.activo?' disabled':''}>${esc(r.nombre)}${!r.activo?' (inactivo)':''}</option>`).join('');
@@ -218,6 +243,7 @@ async function pintar() {
         totalPaginas,
         onPage: p => { paginaActual = p; pintar(); }
     });
+    ajustarFilasAlViewport();
 }
 
 async function cambiarRol(id, rol) {

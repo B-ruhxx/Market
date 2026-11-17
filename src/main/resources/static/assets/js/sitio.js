@@ -2,6 +2,9 @@
 // colores, logo y nombre). Lee /api/sitio/publico y parchea el DOM. Si falla, queda lo estatico.
 
 import { api } from './api.js?v=2';
+import { resolverBanners } from './home-banners.js';
+import { resolverHero, resolverAccesos, resolverEquipos } from './home-content.js';
+import { resolverInspiracion } from './home-stories.js';
 
 const CACHE_KEY = 'electronix_sitio';
 let cache = null;
@@ -124,9 +127,11 @@ function aplicarMarca(cfg) {
     const logo = String(cfg['site.logo'] || '').trim() || '/assets/img/logo.svg';
     document.title = `${nombre} — Tienda Oficial de Equipos Electrónicos`;
     document.querySelectorAll('.fx-brand > span').forEach(el => { el.textContent = nombre; });
+    document.querySelectorAll('[data-site-name]').forEach(el => { el.textContent = nombre; });
     document.querySelectorAll('img.fx-brand-logo').forEach(img => pintarLogo(img, logo, nombre));
-    const legal = document.querySelector('.fx-foot-legal > span');
-    if (legal) legal.textContent = `Copyright © 2026 ${nombre}. Todos los derechos reservados.`;
+    document.querySelectorAll('img.store-footer-logo').forEach(img => pintarLogo(img, logo, nombre));
+    const legal = document.querySelector('.fx-foot-copyright');
+    if (legal) legal.textContent = `Copyright © ${new Date().getFullYear()} ${nombre}. Todos los derechos reservados.`;
 }
 
 function aplicarTema(cfg) {
@@ -148,13 +153,13 @@ function aplicarTema(cfg) {
     }
     st.textContent = `
 .fx-topbar{background:${secundario}!important}
-.fx-hero{background:${secundario}!important}
+.fx-hero:not(.store-hero){background:${secundario}!important}
 .fx-btn{background:${primario}!important}
 .elx-chat-header{background:linear-gradient(135deg, ${oscuro} 0%, ${primario} 100%)!important}
 .elx-chat-send{background-color:${primario}!important}
 .elx-chat-input:focus{border-color:${primario}!important}
-.sitio-hero-cta{display:inline-block;margin-top:18px;padding:11px 30px;border-radius:999px;background:${primario};color:#fff!important;font-weight:700;font-size:.85rem;letter-spacing:.04em;text-decoration:none;box-shadow:0 8px 22px rgba(0,0,0,.35)}
-.sitio-hero-cta:hover{filter:brightness(1.12)}`;
+.fx-hero:not(.store-hero) .sitio-hero-cta{display:inline-block;margin-top:18px;padding:11px 30px;border-radius:999px;background:${primario};color:#fff;font-weight:700;font-size:.85rem}
+.sitio-hero-cta:hover{filter:brightness(1.08)}`;
 }
 
 function pintarSlide(slides, i) {
@@ -166,25 +171,35 @@ function pintarSlide(slides, i) {
     const sub = document.getElementById('fx-hero-sub');
     const contenido = document.querySelector('.fx-hero-content');
     if (!hero) return;
+    // Invalida también una imagen pendiente cuando la siguiente campaña usa un color.
+    const pedido = (pintarSlide._pedido = (pintarSlide._pedido || 0) + 1);
+    hero.dataset.imagenModo = ['producto', 'ambiente'].includes(s.imagenModo) ? s.imagenModo : 'fondo';
+    hero.dataset.imagenError = 'false';
+    if (img) img.alt = s.imagenAlt || s.titulo || 'Producto, imagen referencial';
+    const descripcion = document.getElementById('store-hero-description');
+    if (descripcion) {
+        descripcion.textContent = s.descripcion || '';
+        descripcion.hidden = !s.descripcion;
+    }
 
     const tipo = s.fondoTipo || 'imagen';
     if (tipo === 'imagen' && s.imagen) {
         // Precarga antes de cambiar: evita el flash de la foto anterior al recargar
         const url = normalizarDrive(s.imagen);
-        const pedido = (pintarSlide._pedido = (pintarSlide._pedido || 0) + 1);
         const pre = new Image();
         pre.onload = () => {
             if (pedido !== pintarSlide._pedido || !document.querySelector('.fx-hero')) return;
             if (img) {
                 img.src = url;
                 img.style.display = '';
-                img.onerror = () => { img.style.display = 'none'; };
+                img.onerror = () => { img.style.display = 'none'; hero.dataset.imagenError = 'true'; };
             }
             hero.style.background = '';
         };
         pre.onerror = () => {
             if (pedido !== pintarSlide._pedido) return;
             if (img) img.style.display = 'none';
+            hero.dataset.imagenError = 'true';
         };
         pre.src = url;
     } else if (tipo === 'degradado') {
@@ -204,8 +219,8 @@ function pintarSlide(slides, i) {
         if (!cta && contenido) {
             cta = document.createElement('a');
             cta.id = 'sitio-hero-cta';
-            cta.className = 'sitio-hero-cta';
-            contenido.appendChild(cta);
+            cta.className = hero.classList.contains('store-hero') ? 'store-button sitio-hero-cta' : 'sitio-hero-cta';
+            (contenido.querySelector('.store-hero-actions') || contenido).appendChild(cta);
         }
         if (cta) {
             cta.textContent = s.textoBoton;
@@ -217,8 +232,12 @@ function pintarSlide(slides, i) {
 }
 
 function aplicarHero(cfg) {
-    const slides = leerJSON(cfg, 'hero.slides', []);
-    if (!slides.length || !document.querySelector('.fx-hero')) return;
+    const hero = document.querySelector('.fx-hero');
+    if (!hero) return;
+    const slides = resolverHero(leerJSON(cfg, 'hero.slides', null));
+    hero.hidden = !slides.length;
+    if (!slides.length) return;
+    document.querySelectorAll('.store-hero-controls').forEach(el => { el.hidden = slides.length < 2; });
     window.SITIO_HERO = slides.map(s => ({ big: s.titulo || '', sub: s.subtitulo || '' }));
     window.SITIO_HERO_APLICAR = i => pintarSlide(slides, i);
     pintarSlide(slides, 0);
@@ -226,8 +245,9 @@ function aplicarHero(cfg) {
 
 function aplicarCards(cfg) {
     const box = document.querySelector('.fx-cards');
-    const cards = leerJSON(cfg, 'home.cards', []);
-    if (!box || !cards.length) return;
+    if (!box) return;
+    const cards = resolverAccesos(leerJSON(cfg, 'home.cards', null));
+    box.closest('.fx-cards-wrap').hidden = !cards.length;
     box.innerHTML = '';
     cards.forEach(c => {
         const a = document.createElement('a');
@@ -339,10 +359,10 @@ function aplicarEquipos(cfg) {
     const grid = document.getElementById('categorias-grid');
     if (!grid) return;
     // Sin config (o si falla la API) se pintan los de fábrica: nunca se deja el esqueleto.
-    const guardados = leerJSON(cfg, 'home.equipos', []);
-    const equipos = guardados.length ? guardados : EQUIPOS_DEFECTO;
+    const equipos = resolverEquipos(leerJSON(cfg, 'home.equipos', null));
+    document.getElementById('equipos').hidden = !equipos.length;
     const titulo = String(cfg['home.equipos.titulo'] || '').trim();
-    if (titulo) {
+    if (titulo && titulo !== 'EQUIPOS ELECTRONICOS') {
         const h = document.querySelector('#equipos .elx-section-title');
         if (h) h.textContent = titulo;
     }
@@ -390,6 +410,19 @@ function aplicarEquipos(cfg) {
             grid.appendChild(b);
             return;
         }
+        if (t.presentacion === 'compacta' && !Object.keys(d).length) {
+            b.classList.add('elx-cat-card--compact');
+            if (fondoColor) b.style.backgroundColor = fondoColor;
+            b.innerHTML = `
+                <span class="store-category-image"${fondoRaw ? ` style="background-image:url('${esc(fondoRaw).replace(/'/g, '%27')}')"` : ''}>
+                    ${productoRaw ? `<img src="${esc(productoRaw)}" alt="" loading="lazy" decoding="async" onerror="this.hidden=true">` : ''}
+                </span>
+                <span class="elx-cat-name">${esc(t.nombre)}</span>
+                <span class="elx-cat-desc">${esc(t.descripcion)}</span>
+                <span class="elx-cat-cta">${esc(t.cta || 'Explorar')}</span>`;
+            grid.appendChild(b);
+            return;
+        }
         if (d.alinear === 'centro' || d.alinear === 'der' || d.alinear === 'izq') {
             b.dataset.alinear = d.alinear;
         }
@@ -432,14 +465,15 @@ function aplicarEquipos(cfg) {
 
 function aplicarBanners(cfg) {
     const grid = document.querySelector('.elx-promo-grid');
-    const banners = leerJSON(cfg, 'home.banners', []);
-    if (!grid || !banners.length) return;
-    const fallback = 'https://images.unsplash.com/photo-1547394765-185e1e68f34e?w=900&auto=format&fit=crop&q=80';
+    if (!grid) return;
+    const banners = resolverBanners(leerJSON(cfg, 'home.banners', null));
+    grid.closest('.elx-promo-full').hidden = !banners.length;
     grid.innerHTML = '';
-    banners.slice(0, 2).forEach((b, i) => {
-        const azul = (b.estilo || (i === 1 ? 'azul' : 'oscuro')) === 'azul';
-        const div = document.createElement('div');
-        div.className = azul ? 'elx-banner-small elx-banner-apple' : 'elx-banner-large elx-banner-apple';
+    banners.forEach(b => {
+        const bloque = document.createElement('article');
+        bloque.className = 'elx-promo-card';
+        bloque.dataset.estilo = ['azul', 'claro', 'oscuro'].includes(b.estilo) ? b.estilo : 'oscuro';
+        bloque.dataset.encuadre = b.encuadre === 'producto' ? 'producto' : 'foto';
         const tam = (v, min, max) => {
             const n = Number(v);
             return Number.isFinite(n) && n >= min && n <= max ? Math.round(n) : 0;
@@ -447,36 +481,48 @@ function aplicarBanners(cfg) {
         const etTam = tam(b.etiquetaTam, 8, 40);
         const tiTam = tam(b.tituloTam, 12, 80);
         const deTam = tam(b.descTam, 8, 40);
-        const alinearIzq = b.textoAlinear === 'izq';
-        div.innerHTML = `
-            <div class="elx-banner-apple-text"${alinearIzq ? ' style="align-items:flex-start;text-align:left"' : ''}>
-                <span class="elx-banner-tag${azul ? ' elx-banner-tag--light' : ''}"${etTam ? ` style="font-size:${etTam}px"` : ''}>${esc(b.etiqueta)}</span>
-                <h3 class="elx-banner-title${azul ? ' elx-banner-title--sm' : ''}"${tiTam ? ` style="font-size:${tiTam}px"` : ''}>${esc(b.titulo)}</h3>
-                ${b.descripcion ? `<p class="elx-banner-desc"${deTam ? ` style="font-size:${deTam}px"` : ''}>${esc(b.descripcion)}</p>` : ''}
-                <a href="${esc(b.linkUrl || '/productos.html')}" class="${azul ? 'elx-banner-link elx-pill-btn elx-pill-btn--light' : 'elx-hero-btn elx-hero-btn--compact elx-pill-btn'}">${esc(b.boton || 'Ver más')}</a>
+        const centrado = b.textoAlinear === 'centro';
+        bloque.innerHTML = `
+            <div class="elx-promo-copy" style="align-items:${centrado ? 'center' : 'flex-start'};text-align:${centrado ? 'center' : 'left'}">
+                ${b.etiqueta ? `<span class="elx-promo-eyebrow"${etTam ? ` style="font-size:${etTam}px"` : ''}>${esc(b.etiqueta)}</span>` : ''}
+                <h3 class="elx-promo-title"${tiTam ? ` style="font-size:${tiTam}px"` : ''}>${esc(b.titulo)}</h3>
+                ${b.descripcion ? `<p class="elx-promo-desc"${deTam ? ` style="font-size:${deTam}px"` : ''}>${esc(b.descripcion)}</p>` : ''}
+                <div class="elx-promo-actions">
+                    <a href="${esc(b.linkUrl || '/productos.html')}" class="elx-promo-btn">${esc(b.boton || 'Ver más')}</a>
+                    ${b.botonSecundario && b.linkSecundario ? `<a href="${esc(b.linkSecundario)}" class="elx-promo-btn elx-promo-btn--outline">${esc(b.botonSecundario)}</a>` : ''}
+                </div>
             </div>
-            <img class="elx-banner-apple-img" src="${esc(normalizarDrive(b.imagen || fallback))}" alt="${esc(b.titulo)}" loading="lazy" onerror="this.style.display='none'">`;
-        grid.appendChild(div);
+            <div class="elx-promo-media">
+                ${b.imagen ? `<img src="${esc(normalizarDrive(b.imagen))}" alt="${esc(b.titulo)}" loading="lazy" decoding="async" onerror="this.hidden=true">` : ''}
+            </div>
+        `;
+        grid.appendChild(bloque);
     });
 }
 
 function aplicarSpotlight(cfg) {
     const track = document.getElementById('spot-track');
-    const spots = leerJSON(cfg, 'home.spotlight', []);
-    if (!track || !spots.length) return;
+    const spots = resolverInspiracion(leerJSON(cfg, 'home.spotlight', null));
+    if (!track) return;
+    track.closest('.elx-spotlight').hidden = !spots.length;
     track.innerHTML = '';
     spots.forEach(s => {
         const art = document.createElement('article');
         art.className = 'elx-spot-card';
-        art.style.backgroundImage = `url('${normalizarDrive(s.imagen || '').replace(/'/g, '%27')}')`;
         art.innerHTML = `
-            <span class="elx-spot-veil" aria-hidden="true"></span>
-            <div class="elx-spot-top"><span class="elx-spot-kicker">${esc(s.kicker)}</span></div>
+            <a class="store-story-image" href="${esc(s.linkUrl || '/productos.html')}" tabindex="-1" aria-hidden="true">
+                <img src="${esc(normalizarDrive(s.imagen || '/assets/img/producto-sin-imagen.svg'))}" alt="${esc(s.imagenAlt || s.titulo)}" loading="lazy" decoding="async" width="1400" height="1050">
+            </a>
             <div class="elx-spot-bottom">
+                <span class="elx-spot-kicker">${esc(s.kicker)}</span>
                 <h3>${esc(s.titulo)}</h3>
                 <p>${esc(s.descripcion)}</p>
                 <a href="${esc(s.linkUrl || '/productos.html')}" class="elx-spot-btn">${esc(s.boton || 'Ver más')}</a>
             </div>`;
+        art.querySelector('img').onerror = event => {
+            event.target.onerror = null;
+            event.target.src = '/assets/img/producto-sin-imagen.svg';
+        };
         track.appendChild(art);
     });
     const dots = document.getElementById('spot-dots');
@@ -485,13 +531,13 @@ function aplicarSpotlight(cfg) {
 
 export async function aplicarSitio() {
     const cfg = await obtenerSitio();
-    if (!cfg || !Object.keys(cfg).length) return cfg;
-    aplicarMarca(cfg);
-    aplicarTema(cfg);
+    aplicarBanners(cfg);
     aplicarHero(cfg);
     aplicarCards(cfg);
     aplicarEquipos(cfg);
-    aplicarBanners(cfg);
     aplicarSpotlight(cfg);
+    if (!cfg || !Object.keys(cfg).length) return cfg;
+    aplicarMarca(cfg);
+    aplicarTema(cfg);
     return cfg;
 }
