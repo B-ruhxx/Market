@@ -199,9 +199,10 @@ public class PedidoServiceImpl implements PedidoService {
         if (cacheManager != null) {
             Cache cache = cacheManager.getCache("productos");
             if (cache != null) {
-                for (ItemCarrito item : items) {
-                    if (item.getProducto() != null && item.getProducto().getId() != null) {
-                        cache.evict(item.getProducto().getId());
+                for (DetallePedido detalle : detalles) {
+                    Producto producto = detalle.getProducto();
+                    if (producto != null && producto.getId() != null) {
+                        cache.evict(producto.getId());
                     }
                 }
             }
