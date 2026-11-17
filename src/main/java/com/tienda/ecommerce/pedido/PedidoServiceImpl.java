@@ -17,6 +17,8 @@ import com.tienda.ecommerce.pago.MetodoPagoConfig;
 import com.tienda.ecommerce.pago.MetodoPagoConfigRepository;
 import com.tienda.ecommerce.usuario.Usuario;
 import com.tienda.ecommerce.usuario.UsuarioRepository;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -39,6 +41,7 @@ public class PedidoServiceImpl implements PedidoService {
     private final CotizacionService cotizaciones;
     private final com.tienda.ecommerce.pago.FormularioPagoService formularios;
     private final jakarta.persistence.EntityManager entityManager;
+    private final CacheManager cacheManager;
 
     public PedidoServiceImpl(
             PedidoRepository pedidoRepository,
@@ -49,7 +52,8 @@ public class PedidoServiceImpl implements PedidoService {
             MetodoPagoConfigRepository metodoPagoConfigRepository,
             CotizacionService cotizaciones,
             com.tienda.ecommerce.pago.FormularioPagoService formularios,
-            jakarta.persistence.EntityManager entityManager
+            jakarta.persistence.EntityManager entityManager,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) CacheManager cacheManager
     ) {
         this.pedidoRepository = pedidoRepository;
         this.productoRepository = productoRepository;
@@ -60,6 +64,7 @@ public class PedidoServiceImpl implements PedidoService {
         this.cotizaciones = cotizaciones;
         this.formularios = formularios;
         this.entityManager = entityManager;
+        this.cacheManager = cacheManager;
     }
 
     @Override
@@ -189,6 +194,18 @@ public class PedidoServiceImpl implements PedidoService {
         // Vaciar el carrito del usuario tras confirmar la compra
         carrito.getItems().clear();
         carritoRepository.save(carrito);
+
+        // Invalidar cache de los productos comprados para evitar inconsistencias de stock (HIGH-01)
+        if (cacheManager != null) {
+            Cache cache = cacheManager.getCache("productos");
+            if (cache != null) {
+                for (ItemCarrito item : items) {
+                    if (item.getProducto() != null && item.getProducto().getId() != null) {
+                        cache.evict(item.getProducto().getId());
+                    }
+                }
+            }
+        }
 
         return mapearADto(pedidoGuardado);
     }
