@@ -26,7 +26,7 @@ export const cart = {
         if (!auth.isAuthenticated()) {
             showToast('Debes iniciar sesión para agregar productos al carrito', 'warning');
             setTimeout(() => {
-                window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
             }, 1000);
             return null;
         }

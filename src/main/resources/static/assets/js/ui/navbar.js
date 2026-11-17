@@ -5,7 +5,7 @@ import { cart } from '../cart.js';
 import { initFloatingChat } from '../chat.js';
 import { initSideDrawer } from './drawer.js';
 import { api } from '../api.js?v=2';
-import { aplicarSitio } from '../sitio.js?v=5';
+import { aplicarSitio } from '../sitio.js?v=6';
 
 export function getElectronixLogo() {
     return `
@@ -32,7 +32,8 @@ function escapeHtml(value) {
 
 export function renderNavbar() {
     // marca y colores editables en todas las paginas publicas (no bloquea el resto)
-    aplicarSitio().catch(() => {});
+    // La portada espera explícitamente la configuración antes de enlazar sus controles.
+    if (!document.body.classList.contains('storefront-home')) aplicarSitio().catch(() => {});
     const authContainer = document.getElementById('nav-auth-container');
     const user = auth.getUser();
     const isAdmin = auth.isAdmin();

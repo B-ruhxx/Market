@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480" fill="none">
+  <title>ESET NOD32. Ilustración de licencia de software.</title>
+  <path d="m320 63 76 28v64c0 51-35 85-76 105-41-20-76-54-76-105V91l76-28Z" fill="#dce9e5"/>
+  <path d="m320 86 54 20v49c0 37-24 63-54 80-30-17-54-43-54-80v-49l54-20Z" stroke="#246c60" stroke-width="3"/>
+  <path d="m297 154 16 16 33-35" stroke="#246c60" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="320" y="314" text-anchor="middle" fill="#215d54" font-family="Arial,sans-serif" font-weight="700" font-size="52" letter-spacing="2">ESET</text>
+  <text x="320" y="357" text-anchor="middle" fill="#293e3a" font-family="Arial,sans-serif" font-size="28">NOD32 Antivirus</text>
+  <text x="320" y="404" text-anchor="middle" fill="#64716c" font-family="Arial,sans-serif" font-size="13" letter-spacing="3">SOFTWARE · 3 EQUIPOS</text>
+</svg>

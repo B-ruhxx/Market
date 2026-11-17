@@ -1,347 +1,299 @@
 import { api } from '/assets/js/api.js';
-import { auth } from '/assets/js/auth.js';
 import { cart } from '/assets/js/cart.js';
 import { renderNavbar } from '/assets/js/ui/navbar.js';
 import { renderProductCard } from '/assets/js/ui/productCard.js';
+import {
+    PRECIO_SIN_LIMITE, ORDEN_DEFECTO, leerEstadoCatalogo,
+    consultaCatalogo, urlCatalogo, resolverCategoria
+} from '/assets/js/catalog-state.js';
 
 renderNavbar();
 
-let currentPage = 0;
+const $ = id => document.getElementById(id);
+const productsContainer = $('products-container');
+const searchInput = $('filter-search');
+const categoriaSelect = $('filter-categoria');
+const priceInput = $('filter-price');
+const orderSelect = $('filter-order');
+const offersInput = $('filter-offers');
+const pagination = $('pagination-container');
+const prevBtn = $('prev-page');
+const nextBtn = $('next-page');
+const drawer = $('filter-drawer');
+const overlay = $('filter-overlay');
+const openBtn = $('btn-open-filters');
+const closeBtn = $('btn-close-filters');
+const applyBtn = $('btn-apply-filters');
+const activeFilters = $('active-filters');
+const pillsNav = $('cat-pills');
+const inicio = leerEstadoCatalogo(window.location.search);
+let currentPage = inicio.pagina;
 let totalPages = 1;
-let totalElementos = 0;
-const pageSize = 12;
+let solicitud = 0;
+let debounceTimer;
+let focoAnterior = null;
+let overflowAnterior = '';
+let fondoInerte = [];
+const formatoNumero = valor => Number(valor).toLocaleString('es-PE');
 
-const productsContainer = document.getElementById('products-container');
-const searchInput = document.getElementById('filter-search');
-const categoriaSelect = document.getElementById('filter-categoria');
-const priceInput = document.getElementById('filter-price');
-const priceVal = document.getElementById('price-val');
-const orderSelect = document.getElementById('filter-order');
-const paginationContainer = document.getElementById('pagination-container');
-const prevPageBtn = document.getElementById('prev-page');
-const nextPageBtn = document.getElementById('next-page');
-const pageInfo = document.getElementById('page-info');
-const btnLimpiar = document.getElementById('btn-limpiar-filtros');
-const resultsCount = document.getElementById('results-count');
+searchInput.value = inicio.nombre;
+priceInput.value = inicio.precioMax;
+orderSelect.value = inicio.orden;
+offersInput.checked = inicio.ofertas;
 
-// Nuevos elementos estilo referencia
-const pillsNav = document.getElementById('cat-pills');
-const btnOpenFilters = document.getElementById('btn-open-filters');
-const filterDrawer = document.getElementById('filter-drawer');
-const filterOverlay = document.getElementById('filter-overlay');
-const btnCloseFilters = document.getElementById('btn-close-filters');
-const btnApplyFilters = document.getElementById('btn-apply-filters');
-const orderLabelBtn = document.getElementById('order-current-label');
-
-const ORDER_LABELS = {
-    'fechaCreacion:desc': 'Recomendaciones',
-    'precio:asc': 'Precio: Menor a Mayor',
-    'precio:desc': 'Precio: Mayor a Menor',
-    'nombre:asc': 'Nombre: A - Z'
-};
-
-const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.has('q')) {
-    searchInput.value = urlParams.get('q');
-}
-if (urlParams.has('ofertas')) {
-    orderSelect.value = 'precio:asc';
-}
-const ordenParam = urlParams.get('orden');
-const ordenes = {
-    'recientes': 'fechaCreacion:desc',
-    'precio-asc': 'precio:asc',
-    'precio-desc': 'precio:desc',
-    'nombre': 'nombre:asc'
-};
-if (ordenParam && ordenes[ordenParam]) {
-    orderSelect.value = ordenes[ordenParam];
+function estadoActual() {
+    return {
+        nombre: searchInput.value, categoriaId: categoriaSelect.value,
+        precioMax: Number(priceInput.value), ofertas: offersInput.checked,
+        orden: orderSelect.value, pagina: currentPage
+    };
 }
 
-function normalizar(s) {
-    return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-}
-
-// Alias de los links viejos / tiles del home -> nombre real en BD
-const ALIAS_CATEGORIA = {
-    'televisores': 'monitores',
-    'laptops': 'laptops y computadoras',
-    'portatiles': 'laptops y computadoras',
-    'audio': 'audio y sonido',
-    'equipo de sonido': 'audio y sonido',
-    'accesorios': 'accesorios moviles',
-    'accesorios y pc': 'accesorios moviles'
-};
-
-function resolverCategoriaPorNombre(cats, buscado) {
-    const n = normalizar(buscado);
-    if (!n) return null;
-    let hit = cats.find(c => normalizar(c.nombre) === n);
-    if (hit) return hit;
-    const alias = ALIAS_CATEGORIA[n];
-    if (alias) {
-        hit = cats.find(c => normalizar(c.nombre) === alias);
-        if (hit) return hit;
-    }
-    // match parcial: "laptop" matchea "laptops y computadoras"
-    hit = cats.find(c => normalizar(c.nombre).includes(n) || n.includes(normalizar(c.nombre).split(' ')[0]));
-    return hit || null;
-}
-
-// ---------- Drawer ----------
+// Panel accesible: el teclado no sale del diálogo y vuelve al control de apertura.
 function openDrawer() {
-    filterDrawer?.classList.add('open');
-    filterOverlay?.classList.add('open');
-    btnCloseFilters?.classList.add('open');
-    filterDrawer?.setAttribute('aria-hidden', 'false');
+    if (drawer.classList.contains('open')) return;
+    focoAnterior = document.activeElement;
+    overflowAnterior = document.body.style.overflow;
+    fondoInerte = [...document.body.children]
+        .filter(el => el !== drawer && el !== overlay && el.tagName !== 'SCRIPT')
+        .map(el => [el, el.inert]);
+    fondoInerte.forEach(([el]) => { el.inert = true; });
+    drawer.inert = false;
+    drawer.classList.add('open');
+    overlay.classList.add('open');
+    drawer.setAttribute('aria-hidden', 'false');
+    openBtn.setAttribute('aria-expanded', 'true');
     document.body.style.overflow = 'hidden';
+    closeBtn.focus({ preventScroll: true });
 }
 
 function closeDrawer() {
-    filterDrawer?.classList.remove('open');
-    filterOverlay?.classList.remove('open');
-    btnCloseFilters?.classList.remove('open');
-    filterDrawer?.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
+    if (!drawer.classList.contains('open')) return;
+    fondoInerte.forEach(([el, previo]) => { el.inert = previo; });
+    document.body.style.overflow = overflowAnterior;
+    (focoAnterior?.isConnected ? focoAnterior : openBtn).focus({ preventScroll: true });
+    drawer.inert = true;
+    drawer.classList.remove('open');
+    overlay.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+    openBtn.setAttribute('aria-expanded', 'false');
 }
 
-btnOpenFilters?.addEventListener('click', openDrawer);
-btnCloseFilters?.addEventListener('click', closeDrawer);
-filterOverlay?.addEventListener('click', closeDrawer);
-orderLabelBtn?.addEventListener('click', openDrawer);
-btnApplyFilters?.addEventListener('click', closeDrawer);
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeDrawer();
-});
-
-// Acordeones del drawer
-document.querySelectorAll('.gf-acc-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        btn.closest('.gf-acc')?.classList.toggle('open');
-    });
-});
-
-function updateOrderLabel() {
-    const label = ORDER_LABELS[orderSelect.value] || 'Recomendaciones';
-    if (orderLabelBtn) orderLabelBtn.textContent = label;
-}
-
-function updateFilterDot() {
-    const hasFilters = searchInput.value.trim() !== ''
-        || categoriaSelect.value !== ''
-        || Number(priceInput.value) < 10000
-        || orderSelect.value !== 'fechaCreacion:desc';
-    btnOpenFilters?.classList.toggle('has-filters', hasFilters);
-}
-
-function updateShowBtn() {
-    if (btnApplyFilters) {
-        btnApplyFilters.textContent = `Mostrar ${totalElementos} artículo${totalElementos === 1 ? '' : 's'}`;
+openBtn.addEventListener('click', openDrawer);
+closeBtn.addEventListener('click', closeDrawer);
+overlay.addEventListener('click', closeDrawer);
+applyBtn.addEventListener('click', closeDrawer);
+drawer.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); closeDrawer(); }
+    if (event.key !== 'Tab') return;
+    const controles = [...drawer.querySelectorAll('button:not(:disabled), select, input, a[href]')];
+    const primero = controles[0], ultimo = controles.at(-1);
+    if (event.shiftKey && document.activeElement === primero) {
+        event.preventDefault(); ultimo.focus();
+    } else if (!event.shiftKey && document.activeElement === ultimo) {
+        event.preventDefault(); primero.focus();
     }
-}
+});
 
-// ---------- Pills de categorías ----------
-function renderPills(cats, seleccionadaId) {
-    if (!pillsNav) return;
-    pillsNav.innerHTML = '';
-
-    const mk = (label, value, active) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'gf-pill' + (active ? ' active' : '');
-        b.textContent = label;
-        b.addEventListener('click', () => {
-            categoriaSelect.value = value;
-            currentPage = 0;
-            syncPills();
-            updateFilterDot();
-            cargarProductos();
+function renderPills(categorias) {
+    pillsNav.replaceChildren();
+    [{ id: '', nombre: 'Todo el catálogo' }, ...categorias].forEach(cat => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'catalog-category';
+        button.dataset.categoria = String(cat.id);
+        button.textContent = cat.nombre;
+        button.addEventListener('click', () => {
+            categoriaSelect.value = String(cat.id);
+            filtrar();
         });
-        return b;
-    };
-
-    pillsNav.appendChild(mk('Todas', '', !seleccionadaId));
-    cats.forEach(c => {
-        pillsNav.appendChild(mk(c.nombre, String(c.id), String(c.id) === String(seleccionadaId)));
+        pillsNav.appendChild(button);
     });
 }
 
-function syncPills() {
-    if (!pillsNav) return;
-    const val = categoriaSelect.value;
-    const btns = [...pillsNav.children];
-    // El primero es "Todas", el resto va en orden de las options (saltando la vacía)
-    const opts = [...categoriaSelect.options].filter(o => o.value !== '');
-    btns.forEach((b, i) => {
-        if (i === 0) b.classList.toggle('active', !val);
-        else {
-            const opt = opts[i - 1];
-            b.classList.toggle('active', !!opt && String(opt.value) === String(val));
-        }
+function actualizarControles() {
+    const estado = estadoActual();
+    pillsNav.querySelectorAll('button').forEach(button =>
+        button.setAttribute('aria-pressed', String(button.dataset.categoria === estado.categoriaId)));
+    const activa = pillsNav.querySelector('[aria-pressed="true"]');
+    if (activa) {
+        const limite = pillsNav.getBoundingClientRect();
+        const rect = activa.getBoundingClientRect();
+        if (rect.right > limite.right) pillsNav.scrollLeft += rect.right - limite.right + 12;
+        else if (rect.left < limite.left) pillsNav.scrollLeft += rect.left - limite.left;
+    }
+    const limitado = estado.precioMax < PRECIO_SIN_LIMITE;
+    const precioTexto = limitado ? formatoNumero(estado.precioMax) : 'Sin límite';
+    $('price-val').textContent = precioTexto;
+    priceInput.setAttribute('aria-valuetext', limitado ? `Hasta ${precioTexto}, en la moneda del producto` : 'Sin límite de precio');
+    activeFilters.replaceChildren();
+    const filtros = [];
+    if (estado.nombre.trim()) filtros.push([`Búsqueda: ${estado.nombre.trim()}`, () => { searchInput.value = ''; }]);
+    if (estado.categoriaId) filtros.push([categoriaSelect.selectedOptions[0].textContent, () => { categoriaSelect.value = ''; }]);
+    if (limitado) filtros.push([`Precio hasta ${precioTexto}`, () => { priceInput.value = PRECIO_SIN_LIMITE; }]);
+    if (estado.ofertas) filtros.push(['En oferta', () => { offersInput.checked = false; }]);
+    filtros.forEach(([texto, quitar]) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'catalog-filter-chip';
+        button.appendChild(document.createTextNode(texto));
+        button.insertAdjacentHTML('beforeend', '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg>');
+        button.setAttribute('aria-label', `Quitar filtro: ${texto}`);
+        button.addEventListener('click', () => { quitar(); filtrar(); openBtn.focus({ preventScroll: true }); });
+        activeFilters.appendChild(button);
     });
+    if (filtros.length) {
+        const limpiar = document.createElement('button');
+        limpiar.type = 'button';
+        limpiar.className = 'catalog-clear';
+        limpiar.textContent = 'Limpiar todo';
+        limpiar.addEventListener('click', () => { limpiarFiltros(); openBtn.focus({ preventScroll: true }); });
+        activeFilters.appendChild(limpiar);
+    }
+    $('filter-active-count').hidden = filtros.length === 0;
+    $('filter-active-count').textContent = filtros.length;
 }
 
 async function cargarCategorias() {
     try {
         const res = await api.get('/api/categorias');
-        if (res.exito && res.datos) {
-            const cid = urlParams.get('categoriaId');
-            const cnom = urlParams.get('categoria');
-            let seleccionada = null;
-            if (cid) {
-                seleccionada = res.datos.find(c => String(c.id) === String(cid)) || null;
-            }
-            if (!seleccionada && cnom) {
-                seleccionada = resolverCategoriaPorNombre(res.datos, cnom);
-            }
-            res.datos.forEach(cat => {
-                const opt = document.createElement('option');
-                opt.value = cat.id;
-                opt.textContent = cat.nombre;
-                if (seleccionada && String(seleccionada.id) === String(cat.id)) {
-                    opt.selected = true;
-                }
-                categoriaSelect.appendChild(opt);
-            });
-            renderPills(res.datos, seleccionada ? seleccionada.id : '');
-            // Si vino ?categoria=alias viejo, reescribe la URL a categoriaId canónico
-            if (seleccionada && !cid) {
-                const u = new URL(window.location.href);
-                u.searchParams.delete('categoria');
-                u.searchParams.set('categoriaId', seleccionada.id);
-                window.history.replaceState({}, '', u.toString());
-            }
-        } else {
-            renderPills([], '');
-        }
+        if (!res?.exito || !Array.isArray(res.datos)) throw new Error('Categorías no disponibles');
+        const categorias = res.datos;
+        categorias.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat.id;
+            opt.textContent = cat.nombre;
+            categoriaSelect.appendChild(opt);
+        });
+        const seleccionada = categorias.find(cat => String(cat.id) === inicio.categoriaId)
+            || resolverCategoria(categorias, inicio.categoria);
+        categoriaSelect.value = seleccionada ? String(seleccionada.id) : '';
+        renderPills(categorias);
+        // Una categoría profunda también debe estar a la vista en la tira horizontal.
+        actualizarControles();
     } catch (err) {
-        console.error('Error cargando categorías:', err);
-        renderPills([], '');
+        console.warn('No se pudieron cargar las categorías del catálogo:', err);
+        // Mantener un enlace directo válido incluso si falla la lista de categorías.
+        if (inicio.categoriaId) {
+            const opt = new Option('Categoría seleccionada', inicio.categoriaId, true, true);
+            categoriaSelect.appendChild(opt);
+        }
+        renderPills([]);
     }
+}
+
+function mostrarEstado(titulo, descripcion, accion, callback) {
+    const estado = document.createElement('div');
+    estado.className = 'catalog-state';
+    const h2 = document.createElement('h2');
+    h2.textContent = titulo;
+    h2.tabIndex = -1;
+    const p = document.createElement('p');
+    p.textContent = descripcion;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'store-button';
+    button.textContent = accion;
+    button.addEventListener('click', callback);
+    estado.append(h2, p, button);
+    productsContainer.replaceChildren(estado);
 }
 
 async function cargarProductos() {
-    const nombre = searchInput.value.trim();
-    const categoriaId = categoriaSelect.value;
-    const precioMax = priceInput.value;
-    const [sortBy, direction] = orderSelect.value.split(':');
-
-    let query = `/api/productos?page=${currentPage}&size=${pageSize}&sortBy=${sortBy}&direction=${direction}`;
-    if (nombre) query += `&nombre=${encodeURIComponent(nombre)}`;
-    if (categoriaId) query += `&categoriaId=${categoriaId}`;
-    if (precioMax && precioMax < 10000) query += `&precioMax=${precioMax}`;
-    if (urlParams.has('ofertas')) query += '&etiqueta=OFERTA';
-
+    const pedido = ++solicitud;
+    const estado = estadoActual();
+    window.history.replaceState({}, '', urlCatalogo(estado, window.location.href));
+    actualizarControles();
+    productsContainer.setAttribute('aria-busy', 'true');
+    $('results-count').textContent = 'Buscando productos…';
+    applyBtn.textContent = 'Buscando…';
+    prevBtn.disabled = true;
+    nextBtn.disabled = true;
+    // Sustituir resultados antiguos evita compras sobre una búsqueda ya cambiada.
+    productsContainer.innerHTML = '<div class="catalog-skeleton" aria-hidden="true"></div>'.repeat(8);
     try {
-        const res = await api.get(query);
-        productsContainer.innerHTML = '';
-
-        if (res.exito && res.datos && res.datos.contenido.length > 0) {
-            totalPages = res.datos.totalPaginas;
-            totalElementos = res.datos.totalElementos ?? res.datos.contenido.length;
-            if (resultsCount) {
-                resultsCount.textContent = `${totalElementos} Artículo${totalElementos === 1 ? '' : 's'}`;
-            }
-            res.datos.contenido.forEach(prod => {
-                const card = renderProductCard(prod, async (p) => {
-                    await cart.agregarItem(p.id, 1);
-                });
-                productsContainer.appendChild(card);
-            });
-
-            if (totalPages > 1) {
-                paginationContainer.classList.remove('is-hidden');
-                pageInfo.textContent = `Página ${currentPage + 1} de ${totalPages}`;
-                prevPageBtn.disabled = currentPage === 0;
-                nextPageBtn.disabled = currentPage >= totalPages - 1;
-            } else {
-                paginationContainer.classList.add('is-hidden');
-            }
-        } else {
-            totalElementos = 0;
-            paginationContainer.classList.add('is-hidden');
-            if (resultsCount) resultsCount.textContent = '0 Artículos';
-            productsContainer.innerHTML = `
-                <div class="elx-vacio">
-                    <svg width="48" height="48" class="elx-vacio-icono" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <p class="elx-vacio-titulo">No encontramos productos con esos filtros</p>
-                    <p class="elx-vacio-sub">Intenta ajustando el precio o buscando otro término</p>
-                </div>
-            `;
+        const res = await api.get(consultaCatalogo(estado));
+        if (pedido !== solicitud) return;
+        if (!res?.exito || !Array.isArray(res.datos?.contenido)) throw new Error(res?.mensaje || 'Respuesta de catálogo no válida');
+        const datos = res.datos;
+        totalPages = datos.totalPaginas;
+        const total = datos.totalElementos ?? datos.contenido.length;
+        // Un enlace a una página que ya no existe vuelve a la última disponible.
+        if (totalPages > 0 && currentPage >= totalPages) {
+            currentPage = totalPages - 1;
+            return cargarProductos();
         }
+        $('results-count').textContent = `${formatoNumero(total)} producto${total === 1 ? '' : 's'}`;
+        applyBtn.textContent = `Ver ${formatoNumero(total)} producto${total === 1 ? '' : 's'}`;
+        productsContainer.replaceChildren();
+        if (datos.contenido.length) {
+            const fragment = document.createDocumentFragment();
+            datos.contenido.forEach(producto => {
+                const card = renderProductCard(producto, item => cart.agregarItem(item.id, 1));
+                fragment.appendChild(card);
+            });
+            productsContainer.appendChild(fragment);
+        } else {
+            currentPage = 0;
+            window.history.replaceState({}, '', urlCatalogo(estadoActual(), window.location.href));
+            mostrarEstado('No encontramos ese equipo.', 'Prueba con otro nombre o amplía los filtros para ver más opciones.', 'Ver todo el catálogo', limpiarFiltros);
+        }
+        pagination.hidden = totalPages <= 1;
+        $('page-info').textContent = `Página ${currentPage + 1} de ${Math.max(totalPages, 1)}`;
+        prevBtn.disabled = currentPage === 0;
+        nextBtn.disabled = currentPage >= totalPages - 1;
     } catch (err) {
-        productsContainer.innerHTML = `<div class="elx-error-carga">Error al cargar productos: ${err.message}</div>`;
+        if (pedido !== solicitud) return;
+        pagination.hidden = true;
+        $('results-count').textContent = 'Catálogo no disponible';
+        applyBtn.textContent = 'Volver al catálogo';
+        mostrarEstado('No pudimos cargar el catálogo.', 'Puede ser un problema de conexión. Tus filtros se conservan para volver a intentarlo.', 'Reintentar', cargarProductos);
     } finally {
-        updateOrderLabel();
-        updateFilterDot();
-        updateShowBtn();
+        if (pedido === solicitud) productsContainer.setAttribute('aria-busy', 'false');
     }
 }
 
-let debounceTimer;
-searchInput.addEventListener('input', () => {
+function filtrar() {
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-        currentPage = 0;
-        updateFilterDot();
-        cargarProductos();
-    }, 300);
-});
-
-categoriaSelect.addEventListener('change', () => {
     currentPage = 0;
-    syncPills();
-    updateFilterDot();
     cargarProductos();
-});
+}
 
-priceInput.addEventListener('input', (e) => {
-    priceVal.textContent = `S/ ${parseInt(e.target.value).toLocaleString()}`;
-});
-
-priceInput.addEventListener('change', () => {
-    currentPage = 0;
-    updateFilterDot();
-    cargarProductos();
-});
-
-orderSelect.addEventListener('change', () => {
-    currentPage = 0;
-    updateOrderLabel();
-    updateFilterDot();
-    cargarProductos();
-});
-
-btnLimpiar.addEventListener('click', () => {
+function limpiarFiltros() {
     searchInput.value = '';
     categoriaSelect.value = '';
-    priceInput.value = 10000;
-    priceVal.textContent = 'S/ 10,000';
-    orderSelect.value = 'fechaCreacion:desc';
-    currentPage = 0;
-    syncPills();
-    updateOrderLabel();
-    updateFilterDot();
+    priceInput.value = PRECIO_SIN_LIMITE;
+    orderSelect.value = ORDEN_DEFECTO;
+    offersInput.checked = false;
+    filtrar();
+}
+
+$('catalog-search-form').addEventListener('submit', event => { event.preventDefault(); filtrar(); });
+searchInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    // Invalida resultados en vuelo desde la primera tecla, no tras el debounce.
+    solicitud++;
+    debounceTimer = setTimeout(filtrar, 300);
+});
+categoriaSelect.addEventListener('change', filtrar);
+orderSelect.addEventListener('change', filtrar);
+offersInput.addEventListener('change', filtrar);
+priceInput.addEventListener('input', () => {
+    $('price-val').textContent = Number(priceInput.value) < PRECIO_SIN_LIMITE ? formatoNumero(priceInput.value) : 'Sin límite';
+});
+priceInput.addEventListener('change', filtrar);
+$('btn-limpiar-filtros').addEventListener('click', limpiarFiltros);
+
+function cambiarPagina(delta) {
+    const siguiente = currentPage + delta;
+    if (siguiente < 0 || siguiente >= totalPages) return;
+    clearTimeout(debounceTimer);
+    currentPage = siguiente;
     cargarProductos();
-});
+    $('results-count').scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+}
+prevBtn.addEventListener('click', () => cambiarPagina(-1));
+nextBtn.addEventListener('click', () => cambiarPagina(1));
 
-prevPageBtn.addEventListener('click', () => {
-    if (currentPage > 0) {
-        currentPage--;
-        cargarProductos();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-});
-
-nextPageBtn.addEventListener('click', () => {
-    if (currentPage < totalPages - 1) {
-        currentPage++;
-        cargarProductos();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-});
-
-updateOrderLabel();
 await cargarCategorias();
-syncPills();
 await cargarProductos();

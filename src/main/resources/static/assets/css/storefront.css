@@ -1,0 +1,136 @@
+/* Electronix / sistema público. No modifica los estilos del panel administrativo. */
+@font-face {
+  font-family: 'Electronix UI';
+  src: url('/assets/fonts/inter-latin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+:root {
+  --store-font: 'Electronix UI', -apple-system, 'Segoe UI', sans-serif;
+  --store-paper: #f8f7f4;
+  --store-ink: #171d24;
+  --store-muted: #626972;
+  --store-line: #dedfdb;
+  --store-accent: var(--fx-blue, #3564c9);
+  --store-radius: 20px;
+}
+.store-container { width: min(1224px, 100%); padding-inline: 32px; margin-inline: auto; }
+.store-eyebrow { font: 600 11px/1.5 var(--store-font); letter-spacing: .12em; text-transform: uppercase; color: var(--store-muted); margin: 0 0 18px; }
+.store-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 24px;
+  min-height: 48px; padding: 13px 22px; border: 1px solid transparent; border-radius: 8px;
+  background: var(--store-accent); color: #fff; font: 600 13px/1.5 var(--store-font);
+  text-decoration: none; transition: background .2s ease, transform .2s ease;
+}
+.store-button::after { content: none; }
+.store-button:hover { background: var(--fx-blue-dark, #2a51a5); }
+.store-text-link { display: inline-flex; align-items: center; gap: 20px; color: var(--store-ink); font: 600 13px/1.5 var(--store-font); text-decoration: none; }
+.store-text-link:hover { text-decoration: underline; text-underline-offset: 4px; }
+.store-section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
+.store-section-heading h2 { font: 600 clamp(28px, 3.2vw, 40px)/1.16 var(--store-font); letter-spacing: -.045em; color: var(--store-ink); margin: 0; text-transform: none; }
+.store-section-description { color: var(--store-muted); font: 400 13px/1.8 var(--store-font); margin: 0; }
+.store-section-heading .store-eyebrow { margin-bottom: 14px; }
+.store-skip-link { position: fixed; top: 8px; left: 16px; padding: 12px 20px; background: #fff; color: #111; border: 2px solid var(--store-accent); transform: translateY(-160%); z-index: 200; }
+.store-skip-link:focus { transform: none; }
+.store-button:focus-visible, .store-text-link:focus-visible { outline: 2px solid var(--store-accent); outline-offset: 5px; }
+
+/* Una barra, sin franja de marca separada. Se conservan los controles existentes. */
+#main-navbar.store-header {
+  --store-font: 'Electronix UI', -apple-system, 'Segoe UI', sans-serif;
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 40px;
+  height: 44px; min-height: 44px; padding: 0 max(24px, calc((100vw - 1040px) / 2));
+  background: rgba(250, 250, 252, .94); border-bottom: 0;
+  backdrop-filter: blur(16px); isolation: isolate;
+  font-family: var(--store-font);
+}
+.store-header .fx-topbar { height: auto; background: transparent !important; justify-content: flex-start; }
+.store-header .fx-brand { color: #1d1d1f; font-family: var(--store-font); font-size: 12px; font-weight: 600; letter-spacing: .055em; gap: 7px; }
+.store-header .fx-brand-logo { width: 18px; height: 18px; filter: none; }
+.store-header .fx-navbar { position: static; background: none; border: 0; box-shadow: none; backdrop-filter: none; }
+.store-header .fx-navbar-inner { grid-template-columns: 1fr auto; gap: 32px; padding: 0; max-width: none; height: 44px; min-height: 44px; }
+.store-header .fx-nav-left { display: none; }
+.store-header .fx-nav-center { justify-content: center; gap: 34px; }
+.store-header .fx-nav-link { font-family: var(--store-font); font-size: 11px; color: #424245; font-weight: 400; min-height: 44px; padding-block: 0; }
+.store-menu-icon { display: none; }
+.store-header .fx-nav-right { gap: 16px; }
+.store-header .fx-search-btn, .store-header .fx-cart-btn { width: 28px; height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+.store-header .fx-search-btn img, .store-header .fx-cart-btn img { width: 17px; height: 17px; }
+.store-header .fx-login { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0; background: none; font-family: var(--store-font); font-size: 11px; color: #424245; }
+.store-header .fx-login svg { display: none; }
+.store-header .fx-country { font-family: var(--store-font); }
+.store-header .fx-country button { font-size: 10px; }
+.store-header .fx-mega, .store-header .fx-search-panel { background: var(--store-paper); border-bottom: 1px solid var(--store-line); }
+.store-header .fx-mega-inner, .store-header .fx-search-panel-inner { max-width: 1160px; }
+.store-header .fx-mega-biglinks a { font-family: var(--store-font); font-weight: 550; font-size: 21px; letter-spacing: -.025em; }
+.store-header .fx-mega-kicker { font-family: var(--store-font); color: var(--store-muted); }
+.store-header .fx-backdrop { background: rgba(14, 20, 28, .22); backdrop-filter: blur(5px); }
+.store-header #nav-search-inline { left: 0; transform: translateY(-50%); width: min(580px, 100%); }
+.store-header .fx-navbar.search-open #nav-search-inline { transform: translateY(-50%); }
+.store-header #nav-search-inline-input { font-family: var(--store-font); }
+.store-header .elx-user-name { font-family: var(--store-font); font-size: 12px; }
+
+/* Footer claro compartido por tienda y centro de ayuda. */
+.fx-footer { background: #efeeea; color: #59616a; border-top: 1px solid #dedfda; font-family: var(--store-font); font-size: 12px; }
+.fx-footer .fx-footer-inner { max-width: 1224px; padding: 32px 32px 0; }
+.store-footer-intro { display: flex; align-items: center; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #d9dcd6; }
+.store-footer-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--store-ink); font-size: 16px; font-weight: 600; letter-spacing: .05em; }
+.store-footer-logo { width: 24px; height: 24px; filter: none; object-fit: contain; }
+.store-footer-intro p { margin: 0; color: #626972; font-size: 12px; line-height: 1.8; }
+.store-footer-intro .store-text-link { margin-left: auto; min-height: 40px; color: var(--store-ink); font-size: 11px; font-weight: 500; }
+.fx-footer .fx-dir-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; padding: 30px 0; }
+.fx-footer .fx-dir-group h3 { color: var(--store-ink); font-family: var(--store-font); font-size: 11px; font-weight: 600; }
+.fx-footer .fx-dir-col a { color: #59616a; font-family: var(--store-font); font-size: 11px; }
+.fx-footer .fx-dir-col a:hover { color: var(--store-accent); }
+.fx-footer .fx-dir-group li + li { margin-top: 7px; }
+.store-footer-note { margin: 0; padding: 16px 0; border-top: 1px solid #d9dcd6; color: #626972; font-size: 10px; line-height: 1.8; }
+.store-footer-note a { color: #424c56; text-decoration: underline; text-underline-offset: 3px; }
+.fx-footer .fx-foot-legal { margin: 0; padding: 18px 0 24px; border-top: 1px solid #d9dcd6; color: #626972; font-size: 10px; gap: 12px 24px; }
+.fx-footer .fx-foot-policies a { color: #515b64; }
+.fx-footer .fx-foot-policies a + a { border-color: #c0c6c6; }
+.fx-footer .fx-foot-country { color: #424c56; }
+.fx-footer a:focus-visible, .fx-footer summary:focus-visible { outline: 2px solid var(--store-accent); outline-offset: 4px; }
+
+@media (max-width: 1000px) {
+  #main-navbar.store-header { gap: 26px; }
+  .store-header .fx-nav-center { gap: 18px; }
+  .store-header .fx-nav-right { gap: 10px; }
+}
+@media (max-width: 760px) {
+  .store-container { padding-inline: 22px; }
+  #main-navbar.store-header { height: 48px; min-height: 48px; padding-inline: 16px; gap: 12px; }
+  .store-header .fx-navbar-inner { display: flex; height: 48px; min-height: 48px; justify-content: flex-end; gap: 6px; padding: 0; }
+  .store-header .fx-nav-center { display: flex; }
+  .store-header .fx-nav-center > a, .store-header .fx-dropdown-trigger > span, .store-header .fx-chevron, .store-header .fx-country { display: none; }
+  .store-header .fx-dropdown-trigger { display: inline-flex; width: 32px; height: 44px; justify-content: center; padding: 0; }
+  .store-menu-icon { display: block; }
+  .store-header .fx-brand { font-size: 12px; letter-spacing: .035em; }
+  .store-header .fx-brand-logo { width: 18px; height: 18px; }
+  .store-header .fx-nav-right { gap: 5px; }
+  .store-header .fx-login { display: inline-flex; width: 30px; height: 44px; justify-content: center; }
+  .store-header .fx-login svg { display: block; }
+  .store-header .fx-login > span { display: none; }
+  .store-header .elx-user-name, .store-header .elx-user-btn > svg { display: none; }
+  .store-header .elx-user-btn { padding: 0; background: transparent; gap: 0; }
+  .store-header .fx-mega-inner { padding: 22px; }
+  .store-header #nav-search-inline { left: 0; width: 100%; }
+  #main-navbar.store-header:has(.search-open) .fx-topbar { visibility: hidden; }
+  .store-header .fx-navbar.search-open .fx-navbar-inner { position: static; }
+  .store-header .fx-navbar.search-open #nav-search-inline { left: 16px; right: 16px; width: auto; }
+  .store-header .fx-mega-biglinks a { font-size: 18px; }
+  .store-section-heading { align-items: flex-start; flex-wrap: wrap; }
+  .store-section-description br { display: none; }
+  .fx-footer .fx-footer-inner { padding: 28px 22px 0; }
+  .store-footer-intro { flex-wrap: wrap; gap: 12px 22px; padding-bottom: 22px; }
+  .store-footer-intro p { flex-basis: 100%; order: 1; font-size: 11px; }
+}
+@media (max-width: 640px) {
+  .fx-footer .fx-dir-grid { display: block; padding-block: 10px 12px; }
+  .fx-footer .fx-dir-group, .fx-footer .fx-dir-group + .fx-dir-group { margin: 0; border-color: #d9dcd6; }
+  .fx-footer .fx-dir-group summary::after { color: #68727b; }
+  .fx-footer .fx-dir-col a { font-size: 12px; }
+  .fx-footer .fx-foot-legal { padding-bottom: 90px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .store-button, .store-text-link > span { transition: none; }
+}

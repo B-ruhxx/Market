@@ -1,60 +1,81 @@
+const gruposFooter = [
+    ['Explora Electronix', [
+        ['Catálogo completo', '/productos.html'],
+        ['Portátiles y computadoras', '/productos.html?categoria=Laptops%20y%20Computadoras'],
+        ['Smartphones', '/productos.html?categoria=Smartphones'],
+        ['Audio y sonido', '/productos.html?categoria=Audio%20y%20Sonido'],
+        ['Periféricos', '/productos.html?categoria=Perif%C3%A9ricos'],
+        ['Monitores', '/productos.html?categoria=Monitores'],
+        ['Novedades', '/productos.html?orden=recientes'],
+        ['Ofertas', '/productos.html?ofertas=true']
+    ]],
+    ['Tu cuenta', [
+        ['Mi cuenta', '/login.html'], ['Crear una cuenta', '/registro.html'],
+        ['Mis pedidos', '/mis-pedidos.html'], ['Mi carrito', '/carrito.html']
+    ]],
+    ['Podemos ayudarte', [
+        ['Envíos y despachos', '/informacion.html#despachos'],
+        ['Garantía', '/informacion.html#garantia'],
+        ['Cambios y devoluciones', '/informacion.html#devoluciones'],
+        ['Asesoría en línea', '/informacion.html#chat'],
+        ['Soporte', '/informacion.html#soporte'], ['Contacto', '/informacion.html#contacto']
+    ]],
+    ['Sobre Electronix', [
+        ['Nuestra tienda', '/informacion.html#tiendas'],
+        ['Compras para empresas', '/informacion.html#empresas'],
+        ['Mapa del sitio', '/informacion.html#mapa']
+    ]]
+];
+
 const footerContent = `
-    <div class="elx-footer-top">
-        <div class="elx-container elx-footer-features">
-            <div class="elx-feature-box"><div><h4 class="elx-feature-title">Garantía Asegurada</h4><p class="elx-feature-desc">12 meses de soporte oficial de fábrica.</p></div></div>
-            <div class="elx-feature-box"><div><h4 class="elx-feature-title">Despacho Rápido</h4><p class="elx-feature-desc">Envíos gratis a todo el Perú en compras &gt; S/ 199.</p></div></div>
-            <div class="elx-feature-box"><div><h4 class="elx-feature-title">Chat en Vivo</h4><p class="elx-feature-desc">Atención personalizada con asesores.</p></div></div>
+    <div class="fx-footer-inner">
+        <div class="store-footer-intro">
+            <a class="store-footer-brand" href="/index.html" aria-label="Electronix — Inicio">
+                <img src="/assets/img/logo.svg" class="store-footer-logo" alt="" width="24" height="24">
+                <span data-site-name>ELECTRONIX</span>
+            </a>
+            <p>Tecnología para tu día a día.</p>
+            <a class="store-text-link" href="/informacion.html">Visitar el centro de ayuda</a>
         </div>
-    </div>
-    <div class="fx-directory">
-        <div class="fx-container fx-dir-grid">
-            <div class="fx-dir-col">
-                <h3>Comprar</h3>
-                <a href="/productos.html?categoria=Televisores">Televisores</a>
-                <a href="/productos.html?categoria=Smartphones">Smartphones</a>
-                <a href="/productos.html?categoria=Laptops">Portátiles</a>
-                <a href="/productos.html?categoria=Audio">Equipo de Sonido</a>
-                <a href="/productos.html?categoria=Accesorios">Accesorios y PC</a>
-                <h3>Descubre</h3>
-                <a href="/productos.html?ofertas=true">Ofertas</a>
-                <a href="/productos.html?orden=recientes">Más vendidos</a>
-                <a href="/productos.html">Recomendados</a>
-            </div>
-            <div class="fx-dir-col">
-                <h3>Cuenta</h3>
-                <a href="/mis-pedidos.html">Mis pedidos</a>
-                <a href="/login.html">Iniciar sesión</a>
-                <a href="/registro.html">Regístrate</a>
-                <a href="/carrito.html">Carrito</a>
-            </div>
-            <div class="fx-dir-col">
-                <h3>Tienda</h3>
-                <a href="/informacion.html#tiendas">Nuestras tiendas</a>
-                <a href="/informacion.html#garantia">Garantía oficial</a>
-                <a href="/informacion.html#despachos">Despachos</a>
-                <a href="/informacion.html#chat">Chat en vivo</a>
-                <h3>Ayuda</h3>
-                <a href="/informacion.html#soporte">Soporte</a>
-                <a href="/informacion.html#contacto">Contacto</a>
-            </div>
-            <div class="fx-dir-col">
-                <h3>Electronix</h3>
-                <a href="/index.html">Inicio</a>
-                <a href="/productos.html">Productos</a>
-                <a href="/productos.html?orden=recientes">Populares</a>
-                <a href="/informacion.html#empresas">Empresas</a>
-            </div>
+        <nav class="fx-dir-grid" aria-label="Directorio de la tienda">
+            ${gruposFooter.map(([titulo, enlaces]) => `
+                <div class="fx-dir-col"><details class="fx-dir-group" open>
+                    <summary><h3>${titulo}</h3></summary>
+                    <ul>${enlaces.map(([texto, url]) => `<li><a href="${url}">${texto}</a></li>`).join('')}</ul>
+                </details></div>`).join('')}
+        </nav>
+        <p class="store-footer-note">Antes de comprar, consulta la <a href="/informacion.html#garantia">garantía</a> y las <a href="/informacion.html#despachos">condiciones de despacho</a> aplicables a tu pedido.</p>
+        <div class="fx-foot-legal">
+            <span class="fx-foot-copyright">© ${new Date().getFullYear()} ELECTRONIX. Todos los derechos reservados.</span>
+            <nav class="fx-foot-policies" aria-label="Información legal">
+                <a href="/informacion.html#privacidad">Privacidad</a>
+                <a href="/informacion.html#terminos">Términos de uso</a>
+                <a href="/informacion.html#devoluciones">Devoluciones</a>
+            </nav>
+            <span class="fx-foot-country" id="fx-footer-country">Perú</span>
         </div>
-        <div class="fx-container"><div class="fx-foot-legal">
-            <span>Copyright © 2026 ELECTRONIX. Todos los derechos reservados.</span><span class="fx-foot-sep" aria-hidden="true">|</span>
-            <a href="/informacion.html#privacidad">Política de privacidad</a><span class="fx-foot-sep" aria-hidden="true">|</span>
-            <a href="/informacion.html#terminos">Términos de uso</a><span class="fx-foot-sep" aria-hidden="true">|</span>
-            <a href="/informacion.html#devoluciones">Ventas y devoluciones</a><span class="fx-foot-sep" aria-hidden="true">|</span>
-            <a href="/informacion.html#mapa">Mapa del sitio</a><span class="fx-foot-country">Perú</span>
-        </div></div>
     </div>`;
 
 document.querySelectorAll('[data-site-footer]').forEach(footer => {
     footer.className = 'fx-footer';
     footer.innerHTML = footerContent;
+    try {
+        const pais = JSON.parse(localStorage.getItem('elx-country') || 'null');
+        if (pais && pais.name) footer.querySelector('.fx-foot-country').textContent = pais.name;
+    } catch { /* Mantener Perú si no hay preferencia guardada. */ }
+    const mobile = window.matchMedia('(max-width: 640px)');
+    const grupos = footer.querySelectorAll('.fx-dir-group');
+    function ajustarDirectorio() {
+        grupos.forEach(grupo => {
+            grupo.open = !mobile.matches;
+            grupo.querySelector('summary').tabIndex = mobile.matches ? 0 : -1;
+        });
+    }
+    grupos.forEach(grupo => {
+        grupo.querySelector('summary').addEventListener('click', event => {
+            if (!mobile.matches) event.preventDefault();
+        });
+    });
+    mobile.addEventListener('change', ajustarDirectorio);
+    ajustarDirectorio();
 });

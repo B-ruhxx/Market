@@ -23,6 +23,9 @@
     }
     function closeSearch() {
         if (!isSearchOpen()) return;
+        // Mide el campo visible antes de que su distribución vuelva al estado cerrado.
+        var backIcon = inlineWrap ? inlineWrap.querySelector('.fx-inline-icon') : null;
+        var bg = backIcon ? backIcon.getBoundingClientRect() : null;
         travelSeq++; // invalida cualquier viaje en curso
         nav.classList.remove('search-open');
         nav.classList.remove('search-landed');
@@ -40,7 +43,6 @@
         }
         if (!isMegaOpen() && backdrop) backdrop.classList.remove('open');
         // la lupita regresa a su sitio deslizándose en horizontal
-        var backIcon = inlineWrap ? inlineWrap.querySelector('.fx-inline-icon') : null;
         var gliding = false;
         if (!reduceMotion && searchToggle && backIcon) {
             // mide el origen real: suelta un momento la congelación del viaje de ida
@@ -48,7 +50,6 @@
             searchToggle.style.transform = '';
             var bt = searchToggle.getBoundingClientRect();
             searchToggle.style.transform = prevTransform;
-            var bg = backIcon.getBoundingClientRect();
             var bdx = (bg.left + bg.width / 2) - (bt.left + bt.width / 2);
             if (Math.abs(bdx) > 2) {
                 try {
@@ -189,21 +190,29 @@
     }
 
     if (catWrap && catTrigger) {
-        catWrap.addEventListener('mouseenter', openMega);
+        // En la barra compacta se abre por clic/toque: el mouseenter sintético
+        // del móvil no debe abrirlo para que el mismo toque lo cierre otra vez.
+        if (!nav.closest('.store-header')) catWrap.addEventListener('mouseenter', openMega);
         catTrigger.addEventListener('click', function (e) {
             e.stopPropagation();
             if (isMegaOpen()) closeMega(); else openMega();
         });
     }
-    if (nav) nav.addEventListener('mouseleave', function () { closeMega(); });
+    if (nav && !nav.closest('.store-header')) nav.addEventListener('mouseleave', function () { closeMega(); });
     if (searchToggle) searchToggle.addEventListener('click', function (e) {
         e.stopPropagation();
         if (isSearchOpen()) closeSearch(); else openSearch();
     });
     if (searchClose) searchClose.addEventListener('click', closeSearch);
     if (backdrop) backdrop.addEventListener('click', closeAll);
+    if (mega) mega.addEventListener('click', function (e) {
+        if (e.target.closest('a[href]')) closeMega();
+    });
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') closeAll();
+    });
+    if (nav.closest('.store-header')) document.addEventListener('click', function (e) {
+        if (!nav.contains(e.target)) closeMega();
     });
 
     // Navbar con sombra al hacer scroll (efecto translúcido estilo Apple)

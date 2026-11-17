@@ -1,5 +1,6 @@
-// productCard.js - Tarjeta de producto estilo tienda (imagen compacta, precio bajo el nombre)
+// Una sola tarjeta para catálogo, novedades y relacionados.
 import { formatoMoneda } from '../money.js';
+import { precioProducto, galeriaProducto, pintarImagenProducto } from '../product-presentation.js';
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -11,29 +12,22 @@ function escapeHtml(value) {
 }
 
 export function renderProductCard(producto, onAddToCart) {
-    const card = document.createElement('div');
-    card.className = 'elx-product-card';
+    const card = document.createElement('article');
+    card.className = 'elx-product-card store-product-card';
 
     const precioFormateado = formatoMoneda(producto.precio, producto.monedaCodigo);
     const tieneStock = producto.stock > 0;
-    const imagenFallback = 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=600&auto=format&fit=crop&q=80';
-
     const etiquetaUp = String(producto.etiqueta || '').trim().toUpperCase();
-    const precioOfertaNum = Number(producto.precioOferta);
-    const esOferta = etiquetaUp === 'OFERTA' && Number.isFinite(precioOfertaNum) && precioOfertaNum > 0
-        && Number(producto.precio) > precioOfertaNum;
-    const descuento = esOferta
-        ? Math.round((1 - precioOfertaNum / Number(producto.precio)) * 100)
-        : 0;
+    const precio = precioProducto(producto);
 
     const ETIQUETAS = {
         NUEVO: ['Nuevo', 'elx-ribbon-nuevo'],
-        OFERTA: [esOferta ? `-${descuento}%` : 'Oferta', 'elx-ribbon-oferta'],
+        OFERTA: [precio.oferta ? `-${precio.descuento}%` : 'Oferta', 'elx-ribbon-oferta'],
         TENDENCIA: ['Tendencia', 'elx-ribbon-tendencia']
     };
-    const etiqueta = ETIQUETAS[etiquetaUp];
-    const bloquePrecio = esOferta
-        ? `<div class="elx-product-price"><s class="elx-old-price">${precioFormateado}</s> <span class="elx-offer-price">${formatoMoneda(precioOfertaNum, producto.monedaCodigo)}</span></div>`
+    const etiqueta = Object.hasOwn(ETIQUETAS, etiquetaUp) ? ETIQUETAS[etiquetaUp] : null;
+    const bloquePrecio = precio.oferta
+        ? `<div class="elx-product-price"><s class="elx-old-price">${precioFormateado}</s> <span class="elx-offer-price">${formatoMoneda(precio.vigente, producto.monedaCodigo)}</span></div>`
         : `<div class="elx-product-price">${precioFormateado}</div>`;
 
     card.innerHTML = `
@@ -41,11 +35,10 @@ export function renderProductCard(producto, onAddToCart) {
             ${etiqueta ? `<span class="elx-ribbon ${etiqueta[1]}">${etiqueta[0]}</span>` : ''}
             <a href="/producto.html?id=${Number(producto.id) || ''}" tabindex="-1" aria-hidden="true">
                 <img
-                    src="${escapeHtml(producto.imagenUrl) || imagenFallback}"
                     alt="${escapeHtml(producto.nombre)}"
                     class="elx-product-img"
                     loading="lazy"
-                    onerror="this.src='${imagenFallback}'"
+                    decoding="async"
                 />
             </a>
         </div>
@@ -57,28 +50,40 @@ export function renderProductCard(producto, onAddToCart) {
                     <h3 class="elx-product-title">${escapeHtml(producto.nombre)}</h3>
                 </a>
 
-                ${bloquePrecio}
             </div>
-
+            <div class="store-product-bottom">
+                ${bloquePrecio}
+                ${tieneStock ? '' : '<p class="store-product-stock">Agotado por ahora</p>'}
             <div class="elx-product-actions">
-                <a href="/producto.html?id=${Number(producto.id) || ''}" class="elx-btn-detail">
-                    Ver detalle
-                </a>
-
                 <button
+                    type="button"
                     class="add-btn elx-btn-add ${tieneStock ? '' : 'elx-btn-deshabilitado'}"
                     ${tieneStock ? '' : 'disabled'}
                 >
                     <span>${tieneStock ? 'Agregar' : 'Sin stock'}</span>
                 </button>
             </div>
+            </div>
         </div>
     `;
 
+    pintarImagenProducto(card.querySelector('img'), galeriaProducto(producto)[0], producto.nombre || 'Producto');
     const addBtn = card.querySelector('.add-btn');
+    addBtn.setAttribute('aria-label', tieneStock
+        ? `Agregar ${producto.nombre} al carrito` : `Sin stock: ${producto.nombre}`);
     if (addBtn && tieneStock && onAddToCart) {
-        addBtn.addEventListener('click', () => {
-            onAddToCart(producto);
+        addBtn.addEventListener('click', async () => {
+            if (addBtn.disabled) return;
+            addBtn.disabled = true;
+            addBtn.setAttribute('aria-busy', 'true');
+            addBtn.textContent = 'Agregando…';
+            try { await onAddToCart(producto); }
+            catch { /* El carrito informa del error con su propio aviso. */ }
+            finally {
+                addBtn.disabled = false;
+                addBtn.removeAttribute('aria-busy');
+                addBtn.textContent = 'Agregar';
+            }
         });
     }
 

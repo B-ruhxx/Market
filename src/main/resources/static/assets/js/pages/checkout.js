@@ -1,32 +1,54 @@
 import { api } from '/assets/js/api.js';
 import { auth } from '/assets/js/auth.js';
 import { cart } from '/assets/js/cart.js';
-import { renderNavbar } from '/assets/js/ui/navbar.js';
-import { showToast } from '/assets/js/ui/toast.js';
 import { formatoMoneda, catalogoMonedas } from '/assets/js/money.js';
+import { iniciarShellCompra } from '/assets/js/ui/purchase-shell.js';
+import { escapar as esc, cotizacionVigente, notaMetodo, estadoPago, estadoPedido } from '/assets/js/purchase-flow.js';
 
-renderNavbar();
+await iniciarShellCompra();
 const $ = id => document.getElementById(id);
-const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-const icono = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg>`;
-let cotizacion = null, metodos = [], metodo = null, secuencia = 0, ocupado = false, cuponAplicado = null;
-let billetera = null, puntosCanjeados = 0, descuentoPuntosPen = 0;
+let cotizacion = null, metodos = [], metodo = null, secuencia = 0;
+let ocupado = false, terminado = false, vencimiento;
+let cuponAplicado = null, billetera = null, puntosCanjeados = 0, descuentoPuntosPen = 0;
 
-if (auth.protegerRutaAutenticada()) iniciar().catch(errorInicial);
+function mensaje(texto, tono = '') {
+    $('checkout-status').textContent = texto;
+    $('checkout-status').dataset.tone = tono;
+}
+function controles() {
+    $('checkout-currency').disabled = ocupado;
+    $('quote-refresh').disabled = ocupado;
+    $('checkout-delivery').disabled = ocupado;
+    $('payment-catalog').disabled = ocupado || !cotizacion;
+    $('btn-confirm-order').disabled = ocupado || terminado || !cotizacionVigente(cotizacion) || !metodo;
+    $('btn-confirm-order').textContent = ocupado ? 'Registrando tu pedido…' : 'Confirmar mi pedido';
+    $('btn-confirm-order').setAttribute('aria-busy', String(ocupado));
+}
 
 async function iniciar() {
-    $('payment-methods').replaceChildren();
-    if (!auth.tienePermiso('COMPRAR')) throw new Error('Tu rol no permite realizar compras');
-    const carrito = await cart.obtenerCarrito();
-    if (!carrito?.items?.length) throw new Error('Tu carrito está vacío');
-    const contenedor = document.createElement('div');
-    contenedor.className = 'mb-4';
-    contenedor.innerHTML = `<label class="block text-xs font-bold mb-1" for="checkout-currency">Moneda de cobro</label><select id="checkout-currency" class="w-full border rounded-lg p-2">${catalogoMonedas().map(m=>`<option value="${esc(m.codigo)}">${esc(m.codigo)} · ${esc(m.nombre)}</option>`).join('')}</select><p id="quote-note" role="status" class="text-xs text-neutral-500 mt-2"></p><button id="quote-refresh" type="button" class="text-xs text-blue-700 underline mt-2">Actualizar cotización</button>`;
-    $('payment-methods').before(contenedor);
-    $('checkout-currency').value = carrito.monedaCodigo || 'PEN';
-    $('checkout-currency').onchange = () => actualizar().catch(errorCotizacion);
-    $('quote-refresh').onclick = () => actualizar().catch(errorCotizacion);
-    $('checkout-form').onsubmit = confirmar;
+    if (!auth.tienePermiso('COMPRAR')) throw new Error('Tu cuenta no tiene permiso para realizar compras.');
+    const confirmado = new URLSearchParams(location.search).get('pedido');
+    if (confirmado && /^[1-9]\d*$/.test(confirmado)) {
+        const res = await api.get('/api/pedidos/mios');
+        const pedido = res?.exito && Array.isArray(res.datos) ? res.datos.find(p => String(p.id) === confirmado) : null;
+        if (!pedido) throw new Error('No encontramos ese pedido en tu cuenta. Puedes consultarlo en Mis pedidos.');
+        mostrarConfirmacion(pedido);
+        return;
+    }
+    const res = await api.get('/api/carrito');
+    if (!res?.exito || !Array.isArray(res.datos?.items)) throw new Error('No se pudo consultar el carrito.');
+    const carrito = res.datos;
+    cart.actualizarBadge(carrito.cantidadTotal);
+    if (!carrito.items.length) throw new Error('Tu carrito está vacío. Añade un producto para continuar.');
+    const monedas = catalogoMonedas();
+    monedas.forEach(m => $('checkout-currency').add(new Option(`${m.codigo} · ${m.nombre}`, m.codigo)));
+    const codigo = carrito.monedaCodigo || 'PEN';
+    if (![...$('checkout-currency').options].some(o => o.value === codigo)) {
+        $('checkout-currency').add(new Option(codigo, codigo));
+    }
+    $('checkout-currency').value = codigo;
+    $('checkout-workspace').hidden = false;
+
     $('btn-aplicar-cupon')?.addEventListener('click', manejarCupon);
     $('input-cupon')?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); manejarCupon(); } });
     $('btn-aplicar-puntos')?.addEventListener('click', manejarPuntos);
@@ -43,7 +65,7 @@ async function cargarBilletera() {
             billetera = res.datos;
             const seccion = $('seccion-puntos-crm');
             if (seccion) {
-                seccion.classList.remove('hidden');
+                seccion.hidden = false;
                 if ($('puntos-disponibles-badge')) {
                     $('puntos-disponibles-badge').textContent = `${billetera.saldoPuntos} pts`;
                 }
@@ -51,7 +73,7 @@ async function cargarBilletera() {
                     const equiv = Number(billetera.valorEstimadoPen ?? billetera.equivalentePen ?? 0).toFixed(2);
                     const nivel = billetera.nivelNombre || 'Bronce';
                     const mult = Number(billetera.multiplicador || 1).toFixed(2);
-                    $('puntos-equivalencia-txt').textContent = `Tienes ${billetera.saldoPuntos} puntos (Equivalente aprox. a S/ ${equiv}) · Nivel ${nivel} (${mult}x puntos).`;
+                    $('puntos-equivalencia-txt').textContent = `Tienes ${billetera.saldoPuntos} puntos (≈ S/ ${equiv}) · Nivel ${nivel} (${mult}x puntos).`;
                 }
                 const input = $('input-puntos');
                 if (input) {
@@ -66,121 +88,90 @@ async function cargarBilletera() {
 
 function recalcularTotales() {
     if (!cotizacion?.datos) return;
-    const datos = cotizacion.datos, formato = v => formatoMoneda(v, datos.monedaCodigo);
+    const datos = cotizacion.datos;
+    const formato = valor => formatoMoneda(valor, datos.monedaCodigo);
     const tasa = Number(datos.tasaPen || 1);
     let totalFinal = Number(datos.total);
 
     // Cupón
     if (cuponAplicado) {
-        const descCuponMoneda = tasa > 0 ? (Number(cuponAplicado.descuentoBasePen) / tasa) : Number(cuponAplicado.descuentoBasePen);
+        const descCuponMoneda = tasa > 0 ? (Number(cuponAplicado.descuentoCalculadoPen || 0) / tasa) : Number(cuponAplicado.descuentoCalculadoPen || 0);
         totalFinal = Math.max(0, totalFinal - descCuponMoneda);
-        if ($('row-descuento-cupon')) $('row-descuento-cupon').classList.remove('hidden');
-        if ($('checkout-discount')) $('checkout-discount').textContent = '-' + formato(descCuponMoneda);
-    } else {
-        if ($('row-descuento-cupon')) $('row-descuento-cupon').classList.add('hidden');
+        if ($('row-descuento-cupon')) {
+            $('row-descuento-cupon').hidden = false;
+            $('lbl-descuento-cupon').textContent = `Descuento Cupón (${esc(cuponAplicado.codigo)})`;
+            $('checkout-discount').textContent = `-${formato(descCuponMoneda)}`;
+        }
+    } else if ($('row-descuento-cupon')) {
+        $('row-descuento-cupon').hidden = true;
     }
 
     // Puntos
     if (puntosCanjeados > 0 && descuentoPuntosPen > 0) {
         const descPuntosMoneda = tasa > 0 ? (descuentoPuntosPen / tasa) : descuentoPuntosPen;
         totalFinal = Math.max(0, totalFinal - descPuntosMoneda);
-        if ($('row-descuento-puntos')) $('row-descuento-puntos').classList.remove('hidden');
-        if ($('txt-puntos-canjeados')) $('txt-puntos-canjeados').textContent = puntosCanjeados;
-        if ($('checkout-discount-points')) $('checkout-discount-points').textContent = '-' + formato(descPuntosMoneda);
-    } else {
-        if ($('row-descuento-puntos')) $('row-descuento-puntos').classList.add('hidden');
+        if ($('row-descuento-puntos')) {
+            $('row-descuento-puntos').hidden = false;
+            if ($('txt-puntos-canjeados')) $('txt-puntos-canjeados').textContent = puntosCanjeados;
+            $('checkout-discount-points').textContent = `-${formato(descPuntosMoneda)}`;
+        }
+    } else if ($('row-descuento-puntos')) {
+        $('row-descuento-puntos').hidden = true;
     }
 
-    for (const id of ['checkout-total', 'btn-total']) if ($(id)) $(id).textContent = formato(totalFinal);
-}
-
-async function actualizar() {
-    const revision = ++secuencia;
-    $('btn-confirm-order').disabled = true; cotizacion = null;
-    $('quote-note').textContent = 'Calculando en el servidor…';
-    const moneda = $('checkout-currency').value;
-    const [q,m] = await Promise.all([
-        api.post('/api/checkout/cotizacion',{monedaCodigo:moneda}),
-        api.get('/api/pagos/metodos?moneda='+encodeURIComponent(moneda))
-    ]);
-    if (revision !== secuencia) return;
-    if (!m.datos?.length) throw new Error('No hay métodos de pago habilitados para '+moneda);
-    cotizacion = q.datos; metodos = m.datos;
-    const datos = cotizacion.datos, formato = v=>formatoMoneda(v,datos.monedaCodigo);
-    const subtotal = datos.items.reduce((s,i)=>s + Number(i.precioBaseUnitario) * i.cantidad, 0);
-    const impuestos = datos.items.reduce((s,i)=>s + Number(i.impuestoMonto || 0), 0);
-    
-    if($('checkout-subtotal')) $('checkout-subtotal').textContent=formato(subtotal);
-    if($('checkout-tax')) $('checkout-tax').textContent=formato(impuestos);
-    $('checkout-items').innerHTML = datos.items.map(i=>`<div class="flex justify-between items-center py-2 border-b border-neutral-100"><div><span class="font-bold block text-xs">${esc(i.nombre)}</span><span class="text-xs text-neutral-500">${i.cantidad} × ${esc(formato(i.precioUnitario))}${Number(i.impuestoPorcentaje)>0 ? ` · Impuesto ${esc(i.impuestoPorcentaje)}%` : ''}${i.monedaOriginal!==datos.monedaCodigo ? ' · Original: '+esc(formatoMoneda(i.precioOriginal,i.monedaOriginal)):''}</span></div><span class="font-bold text-xs">${esc(formato(i.subtotal))}</span></div>`).join('');
-    $('quote-note').textContent = `Cotización válida hasta ${new Date(cotizacion.venceEn).toLocaleTimeString()}. El importe queda fijado durante esos 5 minutos.`;
-    $('payment-methods').innerHTML = metodos.map((m,i)=>`<label class="flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer mb-2"><input type="radio" name="paymethod" value="${esc(m.codigo)}" ${i===0?'checked':''}><span class="text-blue-700">${icono}</span><span><strong class="block text-sm">${esc(m.nombre)}</strong><span class="text-xs text-neutral-500">${esc(m.descripcion)}</span></span></label>`).join('')+'<div id="payment-fields" class="space-y-3 mt-3"></div>';
-    document.querySelectorAll('[name="paymethod"]').forEach(r=>r.onchange=pintarCampos);
-    pintarCampos();
-    recalcularTotales();
-    $('btn-confirm-order').disabled = false;
+    $('checkout-total').textContent = formato(totalFinal);
 }
 
 async function manejarCupon() {
     const input = $('input-cupon');
     const feedback = $('cupon-feedback');
-    const codigo = input?.value.trim().toUpperCase() || '';
+    const codigo = input?.value?.trim().toUpperCase();
+
     if (!codigo) {
         cuponAplicado = null;
-        if (feedback) { feedback.classList.add('hidden'); feedback.textContent = ''; }
-        if ($('row-descuento-cupon')) $('row-descuento-cupon').classList.add('hidden');
+        if (feedback) { feedback.hidden = true; feedback.textContent = ''; }
         recalcularTotales();
         return;
     }
 
-    if (!cotizacion?.datos) {
-        showToast('Espera a que cargue la cotización para validar el cupón', 'warning');
-        return;
-    }
+    if (!cotizacion?.datos) return;
 
-    $('btn-aplicar-cupon').disabled = true;
     try {
+        const subtotalPen = Number(cotizacion.datos.totalBasePen || cotizacion.datos.total || 0);
         const res = await api.post('/api/crm/cupones/validar', {
             codigo,
-            subtotalBasePen: cotizacion.datos.totalBasePen
+            montoSubtotalPen: subtotalPen,
+            deseaCombinarConPuntos: puntosCanjeados > 0
         });
-        const d = res.datos;
-        if (d && d.valido) {
-            cuponAplicado = d;
-            feedback.className = 'mt-2 text-xs text-emerald-700 font-semibold flex items-center gap-1';
-            feedback.innerHTML = `✓ ${esc(d.descripcion || 'Cupón activo')} · Descuento: -${esc(formatoMoneda(d.descuentoBasePen, 'PEN'))}`;
-            feedback.classList.remove('hidden');
-            showToast('Cupón ' + d.codigo + ' aplicado', 'success');
 
-            // Si el cupón no permite combinar puntos, descartar puntos previamente seleccionados
-            if (!d.permiteCombinarPuntos && puntosCanjeados > 0) {
-                puntosCanjeados = 0;
-                descuentoPuntosPen = 0;
-                if ($('input-puntos')) $('input-puntos').value = '';
-                if ($('puntos-feedback')) {
-                    $('puntos-feedback').className = 'mt-2 text-xs text-amber-700 font-semibold';
-                    $('puntos-feedback').textContent = 'Se removieron los puntos porque este cupón no es combinable.';
-                    $('puntos-feedback').classList.remove('hidden');
-                }
+        if (res.exito && res.datos?.valido) {
+            cuponAplicado = {
+                codigo: res.datos.codigo,
+                descuentoCalculadoPen: res.datos.descuentoCalculadoPen,
+                permiteCombinarPuntos: res.datos.permiteCombinarPuntos
+            };
+            if (feedback) {
+                feedback.hidden = false;
+                feedback.style.color = '#059669';
+                feedback.textContent = `✓ Cupón '${codigo}' aplicado: S/ ${Number(res.datos.descuentoCalculadoPen).toFixed(2)} de descuento.`;
             }
         } else {
             cuponAplicado = null;
-            feedback.className = 'mt-2 text-xs text-red-600 font-semibold';
-            feedback.textContent = '✕ ' + (d?.mensaje || 'Cupón no válido');
-            feedback.classList.remove('hidden');
-            showToast(d?.mensaje || 'Cupón no válido', 'warning');
+            if (feedback) {
+                feedback.hidden = false;
+                feedback.style.color = '#e11d48';
+                feedback.textContent = res.datos?.mensaje || 'El cupón no es válido para esta compra.';
+            }
         }
-        recalcularTotales();
     } catch (e) {
         cuponAplicado = null;
-        feedback.className = 'mt-2 text-xs text-red-600 font-semibold';
-        feedback.textContent = '✕ ' + (e.message || 'Error al validar cupón');
-        feedback.classList.remove('hidden');
-        showToast(e.message || 'Error al validar cupón', 'error');
-        recalcularTotales();
-    } finally {
-        $('btn-aplicar-cupon').disabled = false;
+        if (feedback) {
+            feedback.hidden = false;
+            feedback.style.color = '#e11d48';
+            feedback.textContent = e.message || 'Error al validar cupón';
+        }
     }
+    recalcularTotales();
 }
 
 async function manejarPuntos() {
@@ -188,112 +179,272 @@ async function manejarPuntos() {
     const feedback = $('puntos-feedback');
     const pts = parseInt(input?.value || '0', 10);
 
-    if (!pts || pts <= 0) {
+    if (isNaN(pts) || pts <= 0) {
         puntosCanjeados = 0;
         descuentoPuntosPen = 0;
-        if (feedback) { feedback.classList.add('hidden'); feedback.textContent = ''; }
+        if (feedback) { feedback.hidden = true; feedback.textContent = ''; }
         recalcularTotales();
         return;
     }
 
-    if (cuponAplicado && !cuponAplicado.permiteCombinarPuntos) {
-        showToast('El cupón aplicado no permite combinar puntos de fidelización', 'warning');
-        if (feedback) {
-            feedback.className = 'mt-2 text-xs text-amber-700 font-semibold';
-            feedback.textContent = '✕ Este cupón no es combinable con puntos de recompensa.';
-            feedback.classList.remove('hidden');
-        }
-        return;
-    }
+    if (!cotizacion?.datos) return;
 
-    if (!cotizacion?.datos) {
-        showToast('Espera a que cargue la cotización para canjear puntos', 'warning');
-        return;
-    }
-
-    $('btn-aplicar-puntos').disabled = true;
     try {
-        const res = await api.post('/api/crm/puntos/simular', {
+        const subtotalPen = Number(cotizacion.datos.totalBasePen || cotizacion.datos.total || 0);
+        const res = await api.post('/api/crm/puntos/simular-canje', {
             puntosACanjear: pts,
-            subtotalBasePen: cotizacion.datos.totalBasePen
+            montoSubtotalPen: subtotalPen
         });
-        const d = res.datos;
-        if (d && d.valido) {
-            puntosCanjeados = d.puntosPermitidos;
-            descuentoPuntosPen = Number(d.descuentoBasePen);
-            if (input) input.value = puntosCanjeados;
-            feedback.className = 'mt-2 text-xs text-emerald-700 font-semibold flex items-center gap-1';
-            feedback.innerHTML = `✓ ${esc(d.mensaje)} (-S/ ${descuentoPuntosPen.toFixed(2)})`;
-            feedback.classList.remove('hidden');
-            showToast(`${puntosCanjeados} puntos aplicados`, 'success');
+
+        if (res.exito && res.datos?.puedeCanjear) {
+            puntosCanjeados = res.datos.puntosCanjeados;
+            descuentoPuntosPen = res.datos.descuentoPen;
+            if (feedback) {
+                feedback.hidden = false;
+                feedback.style.color = '#d97706';
+                feedback.textContent = `✓ ${puntosCanjeados} puntos canjeados: S/ ${Number(descuentoPuntosPen).toFixed(2)} de descuento directo.`;
+            }
         } else {
             puntosCanjeados = 0;
             descuentoPuntosPen = 0;
-            feedback.className = 'mt-2 text-xs text-red-600 font-semibold';
-            feedback.textContent = '✕ ' + (d?.mensaje || 'No fue posible canjear los puntos');
-            feedback.classList.remove('hidden');
-            showToast(d?.mensaje || 'No fue posible canjear los puntos', 'warning');
+            if (feedback) {
+                feedback.hidden = false;
+                feedback.style.color = '#e11d48';
+                feedback.textContent = res.datos?.mensaje || 'No fue posible canjear los puntos.';
+            }
         }
-        recalcularTotales();
     } catch (e) {
         puntosCanjeados = 0;
         descuentoPuntosPen = 0;
-        feedback.className = 'mt-2 text-xs text-red-600 font-semibold';
-        feedback.textContent = '✕ ' + (e.message || 'Error al validar puntos');
-        feedback.classList.remove('hidden');
-        showToast(e.message || 'Error al validar puntos', 'error');
-        recalcularTotales();
-    } finally {
-        $('btn-aplicar-puntos').disabled = false;
+        if (feedback) {
+            feedback.hidden = false;
+            feedback.style.color = '#e11d48';
+            feedback.textContent = e.message || 'Error al canjear puntos';
+        }
     }
+    recalcularTotales();
+}
+
+async function actualizar() {
+    if (ocupado || terminado) return;
+    const revision = ++secuencia;
+    clearTimeout(vencimiento);
+    const previo = { codigo: metodo?.codigo, version: metodo?.version, valores: new Map(
+        [...$('payment-fields').querySelectorAll('input, select, textarea')].map(input => [input.id, input.value])
+    ) };
+    cotizacion = null;
+    controles();
+    mensaje('');
+    $('quote-note').textContent = 'Calculando los importes en el servidor…';
+    $('checkout-summary').setAttribute('aria-busy', 'true');
+    $('checkout-items').innerHTML = '<p class="flow-note">Preparando el resumen…</p>';
+    for (const id of ['checkout-subtotal', 'checkout-tax', 'checkout-total']) $(id).textContent = '—';
+    const moneda = $('checkout-currency').value;
+    try {
+        const [q, m] = await Promise.all([
+            api.post('/api/checkout/cotizacion', { monedaCodigo: moneda }),
+            api.get('/api/pagos/metodos?moneda=' + encodeURIComponent(moneda))
+        ]);
+        if (revision !== secuencia) return;
+        if (!q?.exito || !cotizacionVigente(q.datos) || q.datos.datos.monedaCodigo !== moneda) {
+            throw new Error(q?.mensaje || 'No se pudo obtener una cotización válida.');
+        }
+        if (!m?.exito || !Array.isArray(m.datos) || !m.datos.length) {
+            throw new Error('No hay métodos de pago habilitados para ' + moneda + '.');
+        }
+        cotizacion = q.datos;
+        metodos = m.datos;
+        metodo = metodos.find(item => item.codigo === previo.codigo) || metodos[0];
+        const datos = cotizacion.datos;
+        const formato = valor => formatoMoneda(valor, datos.monedaCodigo);
+        $('checkout-subtotal').textContent = formato(datos.items.reduce((sum, i) => sum + Number(i.precioBaseUnitario) * Number(i.cantidad), 0));
+        $('checkout-tax').textContent = formato(datos.items.reduce((sum, i) => sum + Number(i.impuestoMonto || 0), 0));
+        $('checkout-items').innerHTML = datos.items.map(item => `
+            <div class="flow-checkout-item"><div><strong>${esc(item.nombre)}</strong>
+                <p>${Number(item.cantidad)} × ${formato(item.precioUnitario)}${Number(item.impuestoPorcentaje) > 0 ? ` · Impuesto ${esc(item.impuestoPorcentaje)}% incluido` : ''}${item.monedaOriginal && item.monedaOriginal !== datos.monedaCodigo ? ` · Precio original: ${esc(formatoMoneda(item.precioOriginal, item.monedaOriginal))}` : ''}</p>
+            </div><span>${formato(item.subtotal)}</span></div>`).join('');
+        $('quote-note').textContent = `Importe vigente hasta ${new Date(cotizacion.venceEn).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}. Revisa el total antes de confirmar.`;
+
+        recalcularTotales();
+        pintarMetodos();
+        if (metodo.codigo === previo.codigo && metodo.version === previo.version) {
+            $('payment-fields').querySelectorAll('input, select, textarea').forEach(input => {
+                if (previo.valores.has(input.id)) input.value = previo.valores.get(input.id);
+            });
+        }
+        const cotizacionActual = cotizacion;
+        vencimiento = setTimeout(() => {
+            if (cotizacion !== cotizacionActual || terminado) return;
+            cotizacion = null;
+            $('quote-note').textContent = 'La cotización venció. Actualiza el importe y revísalo antes de confirmar.';
+            controles();
+        }, Math.max(0, Date.parse(cotizacion.venceEn) - Date.now()));
+    } catch (err) {
+        if (revision !== secuencia) return;
+        cotizacion = null;
+        $('quote-note').textContent = err.message || 'No se pudo calcular el importe.';
+        $('checkout-items').innerHTML = '<p class="flow-note">El resumen no está disponible. Actualiza la cotización para continuar.</p>';
+        mensaje('No se puede confirmar sin una cotización y un método de pago válidos.', 'error');
+    } finally {
+        if (revision === secuencia) {
+            $('checkout-summary').setAttribute('aria-busy', 'false');
+            controles();
+        }
+    }
+}
+
+function pintarMetodos() {
+    const list = $('payment-methods');
+    list.replaceChildren();
+    for (const item of metodos) {
+        const option = document.createElement('label');
+        option.className = 'flow-method-card';
+        option.innerHTML = `
+            <input type="radio" name="metodo-seleccionado" value="${esc(item.codigo)}" ${item.codigo === metodo.codigo ? 'checked' : ''}>
+            <div>
+                <strong>${esc(item.nombre)}</strong>
+                <p>${esc(item.descripcion || notaMetodo(item.codigo))}</p>
+                <small>${esc(item.procesamientoPago)}</small>
+            </div>`;
+        option.querySelector('input').addEventListener('change', () => {
+            metodo = item;
+            pintarCampos();
+            controles();
+        });
+        list.appendChild(option);
+    }
+    pintarCampos();
 }
 
 function pintarCampos() {
-    metodo = metodos.find(m=>m.codigo===document.querySelector('[name="paymethod"]:checked')?.value);
-    const box=$('payment-fields'); box.replaceChildren();
-    if(!metodo) return;
-    if(metodo.instrucciones) { const p=document.createElement('p');p.className='text-sm text-neutral-600 whitespace-pre-line';p.textContent=metodo.instrucciones;box.append(p); }
-    if(metodo.requiereReferencia) box.insertAdjacentHTML('beforeend',`<div><label for="payment-reference" class="block text-xs font-bold mb-1">${esc(metodo.etiquetaReferencia||'Referencia de pago')} *</label><input id="payment-reference" class="w-full border rounded-lg p-2" required minlength="6" maxlength="100"></div>`);
-    for(const c of metodo.campos||[]) {
-        const wrap=document.createElement('div'), label=document.createElement('label');
-        label.htmlFor='pago-'+c.clave;label.className='block text-xs font-bold mb-1';label.textContent=c.etiqueta+(c.obligatorio?' *':'');
-        const input=document.createElement(c.tipo==='select'?'select':c.tipo==='textarea'?'textarea':'input');
-        input.id='pago-'+c.clave;input.dataset.pago=c.clave;input.className='w-full border rounded-lg p-2';input.required=c.obligatorio;
-        if(c.tipo==='select') { const vacia=new Option('Selecciona una opción','');input.add(vacia);for(const o of c.opciones||[]) input.add(new Option(o,o)); }
-        else { if(c.tipo!=='textarea') input.type=c.tipo;input.maxLength=c.maxLongitud||100; }
-        wrap.append(label,input);box.append(wrap);
+    const box = $('payment-fields');
+    box.replaceChildren();
+    if (!metodo) return;
+    const fields = Array.isArray(metodo.formulario?.campos) ? metodo.formulario.campos : [];
+    if (!fields.length) return;
+    const fieldset = document.createElement('fieldset');
+    fieldset.className = 'flow-form-section';
+    fieldset.innerHTML = `<h3>Datos para ${esc(metodo.nombre)}.</h3>`;
+    const grid = document.createElement('div');
+    grid.className = 'flow-fields';
+    for (const field of fields) {
+        const wrapper = document.createElement('div');
+        wrapper.className = `flow-field ${field.tipo === 'TEXTAREA' ? 'full' : 'mobile-full'}`;
+        const label = document.createElement('label');
+        label.htmlFor = `pay-${field.campo}`;
+        label.textContent = `${field.etiqueta}${field.obligatorio ? ' *' : ''}`;
+        wrapper.appendChild(label);
+        let input;
+        if (field.tipo === 'SELECT') {
+            input = document.createElement('select');
+            for (const option of field.opciones || []) {
+                input.add(new Option(option.label || option.valor, option.valor));
+            }
+        } else if (field.tipo === 'TEXTAREA') {
+            input = document.createElement('textarea');
+            input.rows = 2;
+        } else {
+            input = document.createElement('input');
+            input.type = field.tipo === 'NUMBER' ? 'number' : field.tipo === 'EMAIL' ? 'email' : 'text';
+        }
+        input.id = `pay-${field.campo}`;
+        input.name = field.campo;
+        input.dataset.pago = field.campo;
+        input.required = Boolean(field.obligatorio);
+        if (field.placeholder) input.placeholder = field.placeholder;
+        wrapper.appendChild(input);
+        grid.appendChild(wrapper);
     }
-    const p=document.createElement('p');p.className='text-xs text-neutral-500';p.textContent=metodo.procesamiento==='SIMULADO'?'Simulación: no ingreses datos reales de tarjeta. No se realiza ningún cargo.':metodo.procesamiento==='CONTRA_ENTREGA'?'El pago quedará pendiente hasta la entrega.':'El pago quedará pendiente de verificación por personal autorizado.';box.append(p);
+    fieldset.appendChild(grid);
+    box.appendChild(fieldset);
 }
 
-async function confirmar(e) {
-    e.preventDefault();
-    if(ocupado || !cotizacion || !metodo) return;
-    if(Date.now()>=Date.parse(cotizacion.venceEn)){await actualizar().catch(errorCotizacion);showToast('Cotización actualizada: revisa el total antes de confirmar','warning');return;}
-    const form=$('checkout-form');if(!form.reportValidity())return;
-    const telefono=$('checkout-phone').value.replace(/\D/g,'');
-    if(!/^9\d{8}$/.test(telefono)){showToast('Ingresa un celular de 9 dígitos que empiece con 9','warning');return;}
-    const datosPago=Object.fromEntries([...document.querySelectorAll('[data-pago]')].map(i=>[i.dataset.pago,i.value.trim()]));
-    let direccion=[$('checkout-address').value.trim(),$('checkout-dist').value.trim(),$('checkout-prov').value.trim(),$('checkout-depto').value].join(', ');
-    if(direccion.length<8){showToast('Completa la dirección','warning');return;}
-    if($('checkout-ref').value.trim())direccion+=' (Ref: '+$('checkout-ref').value.trim()+')';
-    ocupado=true;$('btn-confirm-order').disabled=true;$('checkout-currency').disabled=true;$('quote-refresh').disabled=true;
+async function confirmar(event) {
+    event.preventDefault();
+    if (ocupado || terminado || !cotizacionVigente(cotizacion) || !metodo) return;
+    for (const id of ['checkout-address', 'checkout-prov', 'checkout-dist', 'checkout-phone']) {
+        $(id).setCustomValidity($(id).value.trim() ? '' : 'Completa este campo.');
+    }
+    const telefono = $('checkout-phone').value.replace(/\D/g, '');
+    $('checkout-phone').setCustomValidity(/^9\d{8}$/.test(telefono) ? '' : 'Ingresa un celular de 9 dígitos que comience con 9.');
+    if (!$('checkout-form').reportValidity()) {
+        mensaje('Revisa los campos obligatorios antes de confirmar.', 'error');
+        return;
+    }
+    const datosPago = Object.fromEntries([...document.querySelectorAll('[data-pago]')].map(input => [input.dataset.pago, input.value.trim()]));
+    let direccion = [$('checkout-address').value.trim(), $('checkout-dist').value.trim(), $('checkout-prov').value.trim(), $('checkout-depto').value].join(', ');
+    if ($('checkout-ref').value.trim()) direccion += ` (Ref: ${$('checkout-ref').value.trim()})`;
+    ocupado = true;
+    controles();
+    mensaje('Registrando tu pedido. No cierres esta página.');
     try {
-        const r=await api.post('/api/pedidos',{
-            direccionEnvio:direccion,
+        const res = await api.post('/api/pedidos', {
+            direccionEnvio: direccion,
             telefono,
-            metodoPago:metodo.codigo,
-            versionMetodo:metodo.version,
-            cotizacionToken:cotizacion.token,
-            referenciaComprobante:$('payment-reference')?.value.trim()||null,
+            metodoPago: metodo.codigo,
+            versionMetodo: metodo.version,
+            cotizacionToken: cotizacion.token,
+            referenciaComprobante: $('payment-reference')?.value.trim() || null,
             datosPago,
-            cuponCodigoAplicado: cuponAplicado?.codigo || null,
+            cuponCodigoAplicado: cuponAplicado ? cuponAplicado.codigo : null,
             puntosACanjear: puntosCanjeados > 0 ? puntosCanjeados : null
         });
-        cart.actualizarBadge(0);showToast(`Pedido #${r.datos.id} generado en ${r.datos.monedaCodigo}`,'success');location.href='/mis-pedidos.html';
-    } catch(e){showToast(e.message,'error');}
-    finally {ocupado=false;$('btn-confirm-order').disabled=false;$('checkout-currency').disabled=false;$('quote-refresh').disabled=false;}
+        if (!res?.exito || !res.datos?.id) throw new Error(res?.mensaje || 'No recibimos la confirmación del pedido.');
+        terminado = true;
+        clearTimeout(vencimiento);
+        cart.actualizarBadge(0);
+        $('payment-fields').replaceChildren();
+        mostrarConfirmacion(res.datos);
+        const url = new URL(location.href);
+        url.searchParams.set('pedido', res.datos.id);
+        history.replaceState({}, '', url);
+    } catch (err) {
+        cotizacion = null;
+        clearTimeout(vencimiento);
+        mensaje(`${err.message || 'No pudimos confirmar el pedido.'} Si no conoces el resultado, revisa Mis pedidos antes de volver a intentarlo.`, 'error');
+        $('quote-note').textContent = 'Actualiza la cotización y revisa el total antes de un nuevo intento.';
+    } finally {
+        ocupado = false;
+        controles();
+    }
 }
 
-function errorCotizacion(e){cotizacion=null;$('btn-confirm-order').disabled=true;$('quote-note').textContent=e.message;showToast(e.message,'warning');}
-function errorInicial(e){$('btn-confirm-order').disabled=true;const p=document.createElement('p');p.textContent=e.message;p.className='text-red-700 p-4';$('checkout-form').prepend(p);showToast(e.message,'error');}
+function mostrarConfirmacion(pedido) {
+    terminado = true;
+    $('checkout-intro').hidden = true;
+    $('checkout-workspace').hidden = true;
+    mensaje('');
+    const pago = estadoPago(pedido), estado = estadoPedido(pedido.estado);
+    const box = $('checkout-success');
+    box.innerHTML = `
+        <p class="store-eyebrow">Pedido registrado · #${esc(pedido.id)}</p>
+        <h1 id="checkout-success-title" tabindex="-1">Gracias por elegir Electronix.</h1>
+        <p>Tu pedido ya está en tu cuenta. Puedes consultar su progreso y los datos de tu compra en Mis pedidos.</p>
+        <div class="flow-actions"><span class="flow-badge" data-tone="${estado.tono}">${esc(estado.texto)}</span><span class="flow-badge" data-tone="${pago.tono}">${esc(pago.texto)}</span></div>
+        <p>${esc(pago.detalle)}</p>
+        <dl class="flow-facts">
+            <div><dt>Número de pedido</dt><dd>#${esc(pedido.id)}</dd></div>
+            <div><dt>Total registrado</dt><dd>${formatoMoneda(pedido.total, pedido.monedaCodigo)}</dd></div>
+            <div><dt>Dirección de entrega</dt><dd>${esc(pedido.direccionEnvio || 'Consulta los detalles en Mis pedidos.')}</dd></div>
+            <div><dt>Método de pago</dt><dd>${esc(pedido.metodoNombre || pedido.metodoPago || 'Consulta los detalles en Mis pedidos.')}</dd></div>
+        </dl>
+        <div class="flow-actions"><a class="store-button" href="/mis-pedidos.html?pedido=${encodeURIComponent(pedido.id)}">Consultar el progreso</a><a class="store-text-link" href="/productos.html">Seguir explorando</a></div>`;
+    box.hidden = false;
+    $('checkout-success-title').focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+$('checkout-currency').addEventListener('change', actualizar);
+$('quote-refresh').addEventListener('click', actualizar);
+$('checkout-form').addEventListener('submit', confirmar);
+for (const id of ['checkout-address', 'checkout-prov', 'checkout-dist', 'checkout-phone']) {
+    $(id).addEventListener('input', () => $(id).setCustomValidity(''));
+}
+if (auth.protegerRutaAutenticada()) {
+    iniciar().catch(err => {
+        $('checkout-workspace').hidden = true;
+        mensaje(err.message || 'No pudimos preparar tu compra.', 'error');
+        $('checkout-status').insertAdjacentHTML('beforeend', '<div class="flow-actions"><a class="flow-link" href="/carrito.html">Revisar mi carrito</a><a class="flow-link" href="/mis-pedidos.html">Mis pedidos</a><button type="button" id="checkout-retry" class="flow-link">Reintentar</button></div>');
+        $('checkout-retry').addEventListener('click', () => location.reload());
+    });
+}

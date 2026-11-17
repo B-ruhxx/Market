@@ -3,237 +3,251 @@ import { formatoMoneda } from '/assets/js/money.js';
 import { cart } from '/assets/js/cart.js';
 import { renderNavbar } from '/assets/js/ui/navbar.js';
 import { renderProductCard } from '/assets/js/ui/productCard.js';
-import { showToast } from '/assets/js/ui/toast.js';
+import { precioProducto, galeriaProducto, pintarImagenProducto, resumenProducto } from '/assets/js/product-presentation.js';
 
 renderNavbar();
 
-const urlParams = new URLSearchParams(window.location.search);
-const productId = urlParams.get('id');
+const productId = new URLSearchParams(window.location.search).get('id') || '';
 const container = document.getElementById('product-detail-container');
 const breadcrumbTitle = document.getElementById('breadcrumb-title');
+let solicitud = 0;
+let observadorCompra;
 
 function esc(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+    return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-if (!productId) {
-    container.innerHTML = `
-        <div class="text-center py-12 text-rose-600">
-            <p class="text-lg font-bold">No se especificó un producto válido.</p>
-            <a href="/productos.html" class="mt-4 inline-block text-[#3564C9] font-bold hover:underline text-sm">Volver al catálogo</a>
-        </div>
-    `;
+function mostrarError(titulo, descripcion, reintentar = false) {
+    container.innerHTML = `<div class="product-state" role="status">
+        <h1>${esc(titulo)}</h1><p>${esc(descripcion)}</p>
+        ${reintentar ? '<button type="button" id="product-retry" class="store-button">Reintentar</button>' : ''}
+        <a href="/productos.html" class="store-text-link">Volver al catálogo</a>
+    </div>`;
+    document.getElementById('product-retry')?.addEventListener('click', cargarDetalle);
+    container.setAttribute('aria-busy', 'false');
+}
+
+if (!/^[1-9]\d*$/.test(productId)) {
+    mostrarError('Elige tu próximo equipo.', 'Abre un producto desde el catálogo para consultar sus detalles.');
 } else {
-    cargarDetalle(productId);
+    cargarDetalle();
 }
 
-async function cargarDetalle(id) {
+async function cargarDetalle() {
+    const pedido = ++solicitud;
+    observadorCompra?.disconnect();
+    document.body.classList.remove('product-purchase-visible');
+    container.setAttribute('aria-busy', 'true');
+    container.innerHTML = '<p class="product-state" role="status">Estamos preparando los detalles de tu equipo…</p>';
     try {
-        const res = await api.get(`/api/productos/${id}`);
-        if (!res.exito || !res.datos) {
-            throw new Error(res.mensaje || 'Producto no disponible');
-        }
-
+        const res = await api.get(`/api/productos/${encodeURIComponent(productId)}`);
+        if (pedido !== solicitud) return;
+        if (!res?.exito || !res.datos) throw new Error('Producto no disponible');
         const p = res.datos;
-        breadcrumbTitle.textContent = p.nombre;
-        document.title = `${p.nombre} — ELECTRONIX`;
-
-        const precioOfertaNum = Number(p.precioOferta);
-        const esOferta = String(p.etiqueta || '').trim().toUpperCase() === 'OFERTA'
-            && Number.isFinite(precioOfertaNum) && precioOfertaNum > 0 && Number(p.precio) > precioOfertaNum;
-        const precioVigente = esOferta ? precioOfertaNum : Number(p.precio);
-        const impuestoPorcentaje = Number(p.impuestoPorcentaje || 0);
-        const impuestoUnitario = precioVigente * impuestoPorcentaje / 100;
-        const precioFinal = precioVigente + impuestoUnitario;
-        const precioFormateado = formatoMoneda(p.precio, p.monedaCodigo);
-        const precioVigenteFmt = formatoMoneda(precioVigente, p.monedaCodigo);
-        const precioFinalFmt = formatoMoneda(precioFinal, p.monedaCodigo);
-        const cuota = formatoMoneda(precioVigente / 6, p.monedaCodigo);
+        const precio = precioProducto(p);
+        const moneda = valor => formatoMoneda(valor, p.monedaCodigo);
         const tieneStock = p.stock > 0;
-        const esEnvioGratis = precioVigente >= 199;
-        const imagenFallback = 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=600&auto=format&fit=crop&q=80';
-        const galeria = (p.imagenes && p.imagenes.length > 0 ? p.imagenes : [p.imagenUrl || imagenFallback]);
-
-        const stockColor = p.stock > 5 ? 'text-emerald-700' : (p.stock > 0 ? 'text-amber-600' : 'text-rose-600');
-        const stockText = p.stock > 0 ? `${p.stock} disponibles` : 'Agotado temporalmente';
-
-        const thumbs = galeria.map((img, i) => `
-            <button type="button" class="elx-thumb${i === 0 ? ' elx-thumb-active' : ''}" data-src="${esc(img)}" aria-label="Ver imagen ${i + 1}">
-                <img src="${esc(img)}" alt="" loading="lazy" onerror="this.src='${imagenFallback}'" />
-            </button>
-        `).join('');
+        const categoriaUrl = p.categoriaId
+            ? `/productos.html?categoriaId=${encodeURIComponent(p.categoriaId)}` : '/productos.html';
+        const resumen = String(p.descripcion || '').trim().length > 170 ? resumenProducto(p.descripcion) : '';
+        breadcrumbTitle.textContent = p.nombre;
+        document.title = `${p.nombre} — ${document.querySelector('.fx-brand > span')?.textContent || 'ELECTRONIX'}`;
 
         container.innerHTML = `
-            <div class="elx-detail-grid">
-                <!-- galería: miniaturas + imagen principal -->
-                <div class="elx-gallery">
-                    <div class="elx-thumbs">${thumbs}</div>
-                    <div class="elx-main-img-wrap">
-                        <img id="elx-main-img" src="${esc(galeria[0])}" alt="${esc(p.nombre)}"
-                            onerror="this.src='${imagenFallback}'" />
-                        <span class="elx-detail-cat">${esc(p.categoriaNombre) || 'Tecnología'}</span>
+            <div class="product-overview">
+                <section class="product-gallery" aria-label="Imágenes del producto">
+                    <div class="product-stage"><img id="elx-main-img" alt="${esc(p.nombre)}" decoding="async" fetchpriority="high"></div>
+                    <div id="product-gallery-bottom" class="product-gallery-bottom" hidden>
+                        <div id="product-thumbs" class="product-thumbs" role="group" aria-label="Elegir imagen"></div>
+                        <p id="product-gallery-status" class="product-gallery-status" aria-live="polite"></p>
                     </div>
-                </div>
-
-                <!-- info central -->
-                <div class="elx-detail-info">
-                    <p class="elx-detail-cond">Nuevo · ${esc(stockText)}</p>
-                    <h1 class="elx-detail-title">${esc(p.nombre)}</h1>
-
-                    <div class="elx-detail-price">${esOferta ? `<s class="elx-old-price">${precioFormateado}</s> <span class="elx-offer-price">${precioVigenteFmt}</span>` : precioVigenteFmt}</div>
-                    ${impuestoPorcentaje > 0 ? `<p class="text-xs text-neutral-500 mt-1">Impuesto adicional ${impuestoPorcentaje}%: total ${precioFinalFmt}</p>` : ''}
-                    <p class="elx-detail-cuotas">6 cuotas de ${cuota} sin interés</p>
-
-                    ${esEnvioGratis ? `
-                        <p class="elx-detail-ship">
-                            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                            <span>Envío gratis a todo el país</span>
-                        </p>
-                    ` : ''}
-
-                    <div class="elx-detail-specs">
-                        <h3>Lo que tienes que saber de este producto</h3>
-                        <ul>
-                            <li><span>Categoría:</span> ${esc(p.categoriaNombre) || 'Tecnología'}</li>
-                            <li><span>Stock:</span> ${tieneStock ? `${p.stock} unidades` : 'Agotado'}</li>
-                            <li><span>SKU:</span> #${p.id}</li>
-                            <li><span>Garantía:</span> 12 meses oficial</li>
-                        </ul>
-                        <p class="elx-detail-desc">${esc(p.descripcion) || 'Sin descripción detallada disponible.'}</p>
-                    </div>
-                </div>
-
-                <!-- caja de compra -->
-                <aside class="elx-buybox">
-                    <p class="elx-buybox-ship">${esEnvioGratis ? 'Envío gratis a todo el país' : 'Despacho a todo el Perú'}</p>
-                    <p class="elx-buybox-stock ${stockColor}">${esc(stockText)}</p>
-
-                    ${tieneStock ? `
-                        <div class="elx-qty-row">
-                            <span>Cantidad:</span>
-                            <div class="elx-qty">
-                                <button id="btn-minus" type="button" aria-label="Quitar uno">−</button>
-                                <input id="cant-input" type="number" value="1" min="1" max="${p.stock}" readonly aria-label="Cantidad" />
-                                <button id="btn-plus" type="button" aria-label="Agregar uno">+</button>
-                            </div>
-                            <span class="elx-qty-max">(${p.stock} disponibles)</span>
+                </section>
+                <section class="product-summary" aria-labelledby="product-title">
+                    <a class="product-category" href="${esc(categoriaUrl)}">${esc(p.categoriaNombre || 'Tecnología')}</a>
+                    <h1 id="product-title" class="product-title">${esc(p.nombre)}</h1>
+                    ${resumen ? `<p class="product-summary-text">${esc(resumen)}</p>` : ''}
+                    <div class="product-pricing">
+                        <div class="product-price">
+                            <span>${moneda(precio.vigente)}</span>
+                            ${precio.oferta ? `<s>${moneda(precio.base)}</s>` : ''}
                         </div>
-                        <button id="btn-buy-now" class="elx-buy-now">Comprar ahora</button>
-                        <button id="btn-add-cart" class="elx-add-cart">Agregar al carrito</button>
-                    ` : `
-                        <div class="elx-out-box">Este producto se encuentra temporalmente agotado.</div>
-                    `}
-
-                    <div class="elx-buybox-meta">
-                        <div><strong>Garantía oficial</strong><span>12 meses de fábrica</span></div>
-                        <div><strong>Despacho rápido</strong><span>Envíos a todo el Perú</span></div>
-                        <div><strong>Compra protegida</strong><span>Pago 100% seguro</span></div>
+                        ${precio.oferta ? `<p class="product-discount">${precio.descuento}% de descuento</p>` : ''}
+                        ${precio.porcentaje > 0 ? `<p class="product-tax">Impuesto adicional: ${precio.porcentaje}%.<br>Total por unidad con impuesto: <strong>${moneda(precio.total)}</strong>.</p>` : ''}
                     </div>
-                </aside>
+                    <p class="product-stock${tieneStock ? '' : ' is-unavailable'}">${tieneStock ? `Disponible · ${esc(p.stock)} ${p.stock === 1 ? 'unidad' : 'unidades'}` : 'Agotado por ahora'}</p>
+                    <div class="product-purchase">
+                        ${tieneStock ? `<div class="product-quantity-row">
+                            <label for="cant-input">Cantidad</label>
+                            <div class="product-quantity">
+                                <button id="btn-minus" type="button" aria-label="Quitar una unidad">−</button>
+                                <input id="cant-input" type="number" value="1" min="1" max="${Number(p.stock)}" readonly>
+                                <button id="btn-plus" type="button" aria-label="Agregar una unidad">+</button>
+                            </div>
+                        </div>` : ''}
+                        <div class="product-purchase-actions">
+                            <button type="button" id="btn-buy-now" class="product-buy" ${tieneStock ? '' : 'disabled'}>Comprar ahora</button>
+                            <button type="button" id="btn-add-cart" class="product-add" ${tieneStock ? '' : 'disabled'}>Agregar al carrito</button>
+                        </div>
+                        <p id="product-feedback" class="product-feedback" role="status" aria-live="polite"></p>
+                        <a class="product-advice" href="/informacion.html#chat">${tieneStock ? '¿Necesitas ayuda para elegir? Conversemos.' : 'Consultar disponibilidad con el equipo'}</a>
+                    </div>
+                </section>
             </div>
-
-            <!-- similares -->
-            <section class="elx-similar">
-                <div class="elx-similar-head">
-                    <h2>También te puede interesar</h2>
-                    <div class="elx-similar-arrows">
-                        <button id="sim-prev" type="button" aria-label="Anteriores">‹</button>
-                        <button id="sim-next" type="button" aria-label="Siguientes">›</button>
-                    </div>
-                </div>
-                <div id="similar-track" class="elx-sim-track">
-                    <p class="elx-sim-loading">Cargando similares...</p>
+            <section class="product-information" aria-labelledby="product-information-title">
+                <h2 id="product-information-title">Conoce los detalles.</h2>
+                <div>
+                    <p class="product-description">${esc(p.descripcion || 'Aún no hay una descripción disponible. Puedes consultar los detalles con nuestro equipo.')}</p>
+                    <dl class="product-facts">
+                        <div><dt>Categoría</dt><dd>${esc(p.categoriaNombre || 'Tecnología')}</dd></div>
+                        <div><dt>Referencia</dt><dd>#${esc(p.id)}</dd></div>
+                        <div><dt>Disponibilidad</dt><dd>${tieneStock ? `${esc(p.stock)} ${p.stock === 1 ? 'unidad' : 'unidades'}` : 'Sin stock'}</dd></div>
+                        <div><dt>Moneda</dt><dd>${esc(p.monedaCodigo || 'PEN')}</dd></div>
+                    </dl>
                 </div>
             </section>
-        `;
-
-        // thumbs
-        const mainImg = document.getElementById('elx-main-img');
-        container.querySelectorAll('.elx-thumb').forEach(btn => {
-            btn.addEventListener('click', () => {
-                container.querySelectorAll('.elx-thumb').forEach(b => b.classList.remove('elx-thumb-active'));
-                btn.classList.add('elx-thumb-active');
-                mainImg.src = btn.dataset.src;
+            <section class="product-related" aria-labelledby="product-related-title">
+                <div class="product-related-head">
+                    <h2 id="product-related-title">Sigue explorando.</h2>
+                    <a href="${esc(categoriaUrl)}" class="store-text-link">Ver la categoría</a>
+                </div>
+                <div id="similar-track" class="product-related-grid" aria-busy="true">
+                    <p class="product-related-status" role="status">Buscando más opciones…</p>
+                </div>
+            </section>`;
+        iniciarGaleria(p);
+        if (tieneStock) iniciarCompra(p);
+        // En móvil el acceso flotante no debe tapar cantidad ni botones de compra.
+        if ('IntersectionObserver' in window) {
+            observadorCompra = new IntersectionObserver(([entrada]) => {
+                document.body.classList.toggle('product-purchase-visible', entrada.isIntersecting);
             });
-        });
-
-        if (tieneStock) {
-            const btnMinus = document.getElementById('btn-minus');
-            const btnPlus = document.getElementById('btn-plus');
-            const cantInput = document.getElementById('cant-input');
-
-            btnMinus.addEventListener('click', () => {
-                const val = parseInt(cantInput.value);
-                if (val > 1) cantInput.value = val - 1;
-            });
-            btnPlus.addEventListener('click', () => {
-                const val = parseInt(cantInput.value);
-                if (val < p.stock) cantInput.value = val + 1;
-                else showToast(`Stock máximo alcanzado (${p.stock})`, 'warning');
-            });
-
-            document.getElementById('btn-add-cart').addEventListener('click', async () => {
-                await cart.agregarItem(p.id, parseInt(cantInput.value));
-            });
-            document.getElementById('btn-buy-now').addEventListener('click', async () => {
-                try {
-                    await cart.agregarItem(p.id, parseInt(cantInput.value));
-                    window.location.href = '/checkout.html';
-                } catch (e) { /* el toast ya se mostró en cart */ }
-            });
+            observadorCompra.observe(container.querySelector('.product-purchase'));
         }
-
-        cargarSimilares(p);
-
+        container.setAttribute('aria-busy', 'false');
+        cargarSimilares(p, pedido);
     } catch (err) {
-        container.innerHTML = `
-            <div class="text-center py-12 text-rose-600">
-                <p class="text-base font-bold">Error al cargar producto: ${esc(err.message)}</p>
-                <a href="/productos.html" class="mt-4 inline-block text-[#3564C9] font-bold hover:underline text-sm">Volver al catálogo</a>
-            </div>
-        `;
+        if (pedido !== solicitud) return;
+        mostrarError(err.status === 404 ? 'Este equipo no está disponible.' : 'No pudimos abrir el producto.',
+            err.status === 404 ? 'Puedes explorar otras opciones en nuestro catálogo.' : 'Revisa tu conexión y vuelve a intentarlo.',
+            err.status !== 404);
     }
 }
 
-async function cargarSimilares(p) {
+function iniciarGaleria(producto) {
+    const imagenes = galeriaProducto(producto);
+    const main = document.getElementById('elx-main-img');
+    const thumbs = document.getElementById('product-thumbs');
+    const status = document.getElementById('product-gallery-status');
+    const botones = [];
+    function seleccionar(indice) {
+        pintarImagenProducto(main, imagenes[indice], `${producto.nombre} · imagen ${indice + 1}`);
+        botones.forEach((boton, i) => boton.setAttribute('aria-pressed', String(i === indice)));
+        status.textContent = `${indice + 1} de ${imagenes.length}`;
+    }
+    if (imagenes.length > 1) {
+        document.getElementById('product-gallery-bottom').hidden = false;
+        imagenes.forEach((src, indice) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'product-thumb';
+            button.setAttribute('aria-label', `Ver imagen ${indice + 1} de ${imagenes.length}`);
+            const img = document.createElement('img');
+            img.loading = 'lazy';
+            pintarImagenProducto(img, src, '');
+            img.alt = '';
+            button.appendChild(img);
+            button.addEventListener('click', () => seleccionar(indice));
+            button.addEventListener('keydown', event => {
+                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                event.preventDefault();
+                const siguiente = event.key === 'Home' ? 0 : event.key === 'End' ? imagenes.length - 1
+                    : (indice + (event.key === 'ArrowRight' ? 1 : -1) + imagenes.length) % imagenes.length;
+                seleccionar(siguiente);
+                botones[siguiente].focus({ preventScroll: true });
+                thumbs.scrollLeft += botones[siguiente].getBoundingClientRect().left - thumbs.getBoundingClientRect().left;
+            });
+            botones.push(button);
+            thumbs.appendChild(button);
+        });
+    }
+    seleccionar(0);
+}
+
+function iniciarCompra(producto) {
+    const input = document.getElementById('cant-input');
+    const minus = document.getElementById('btn-minus');
+    const plus = document.getElementById('btn-plus');
+    const buy = document.getElementById('btn-buy-now');
+    const add = document.getElementById('btn-add-cart');
+    const feedback = document.getElementById('product-feedback');
+    let comprando = false;
+    function actualizarCantidad() {
+        minus.disabled = comprando || Number(input.value) <= 1;
+        plus.disabled = comprando || Number(input.value) >= Number(producto.stock);
+    }
+    minus.addEventListener('click', () => {
+        input.value = Math.max(1, Number(input.value) - 1);
+        actualizarCantidad();
+    });
+    plus.addEventListener('click', () => {
+        input.value = Math.min(Number(producto.stock), Number(input.value) + 1);
+        actualizarCantidad();
+    });
+    async function comprar(irAlPago) {
+        if (comprando) return;
+        comprando = true;
+        buy.disabled = true;
+        add.disabled = true;
+        actualizarCantidad();
+        const boton = irAlPago ? buy : add;
+        boton.setAttribute('aria-busy', 'true');
+        boton.textContent = 'Agregando…';
+        feedback.textContent = '';
+        try {
+            const resultado = await cart.agregarItem(producto.id, Number(input.value));
+            if (resultado && irAlPago) window.location.href = '/checkout.html';
+            else feedback.textContent = resultado ? 'Producto agregado a tu carrito.' : 'Inicia sesión para continuar con tu compra.';
+        } catch {
+            feedback.textContent = 'No se pudo agregar el producto. Puedes volver a intentarlo.';
+        } finally {
+            comprando = false;
+            buy.disabled = false;
+            add.disabled = false;
+            buy.textContent = 'Comprar ahora';
+            add.textContent = 'Agregar al carrito';
+            boton.removeAttribute('aria-busy');
+            actualizarCantidad();
+        }
+    }
+    add.addEventListener('click', () => comprar(false));
+    buy.addEventListener('click', () => comprar(true));
+    actualizarCantidad();
+}
+
+async function cargarSimilares(producto, pedido) {
     const track = document.getElementById('similar-track');
     try {
-        let lista = [];
-        if (p.categoriaId) {
-            const res = await api.get(`/api/productos?categoriaId=${p.categoriaId}&size=12`);
-            if (res.exito && res.datos) lista = res.datos.contenido || res.datos || [];
+        const query = new URLSearchParams({ size: 5 });
+        if (producto.categoriaId) query.set('categoriaId', producto.categoriaId);
+        let res = await api.get(`/api/productos?${query}`);
+        let lista = res?.exito && Array.isArray(res.datos?.contenido) ? res.datos.contenido : [];
+        lista = lista.filter(p => String(p.id) !== String(producto.id)).slice(0, 4);
+        if (!lista.length && producto.categoriaId) {
+            res = await api.get('/api/productos?size=5');
+            lista = (res?.exito && Array.isArray(res.datos?.contenido) ? res.datos.contenido : [])
+                .filter(p => String(p.id) !== String(producto.id)).slice(0, 4);
         }
-        lista = lista.filter(x => String(x.id) !== String(p.id)).slice(0, 10);
-        if (lista.length === 0) {
-            const res = await api.get('/api/productos?size=12');
-            if (res.exito && res.datos) {
-                const gen = res.datos.contenido || res.datos || [];
-                lista = gen.filter(x => String(x.id) !== String(p.id)).slice(0, 10);
-            }
+        if (pedido !== solicitud) return;
+        track.replaceChildren();
+        if (lista.length) {
+            lista.forEach(p => track.appendChild(renderProductCard(p, item => cart.agregarItem(item.id, 1))));
+        } else {
+            track.innerHTML = '<p class="product-related-status">No hay más opciones disponibles por ahora.</p>';
         }
-        if (lista.length === 0) {
-            track.innerHTML = '<p class="elx-sim-loading">No hay productos similares por ahora.</p>';
-            return;
-        }
-        track.innerHTML = '';
-        lista.forEach(prod => {
-            const wrap = document.createElement('div');
-            wrap.className = 'elx-sim-item';
-            wrap.appendChild(renderProductCard(prod, async (x) => { await cart.agregarItem(x.id, 1); }));
-            track.appendChild(wrap);
-        });
-
-        const prev = document.getElementById('sim-prev');
-        const next = document.getElementById('sim-next');
-        const step = () => Math.min(track.clientWidth * 0.8, 480);
-        if (prev) prev.addEventListener('click', () => track.scrollBy({ left: -step(), behavior: 'smooth' }));
-        if (next) next.addEventListener('click', () => track.scrollBy({ left: step(), behavior: 'smooth' }));
-    } catch (err) {
-        track.innerHTML = '<p class="elx-sim-loading">No se pudieron cargar los similares.</p>';
+    } catch {
+        if (pedido === solicitud) track.innerHTML = '<p class="product-related-status">Puedes encontrar más opciones en el catálogo.</p>';
+    } finally {
+        if (pedido === solicitud) track.setAttribute('aria-busy', 'false');
     }
 }

@@ -4,21 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/svg+xml" href="/assets/img/logo.svg">
-    <title>Detalle de Producto — ELECTRONIX</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <title>Tu próximo equipo — ELECTRONIX</title>
+    <meta name="description" content="Conoce los detalles de tu próximo equipo en Electronix. Consulta sus imágenes, precio y disponibilidad.">
+    <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/assets/css/output.css">
-    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js" defer></script>
     <link rel="stylesheet" href="/assets/css/ui/ui-inline.css">
-    <link rel="stylesheet" href="/assets/css/pages/figma-home.css">
+    <link rel="stylesheet" href="/assets/css/pages/figma-home.css?v=4">
+    <link rel="stylesheet" href="/assets/css/storefront.css?v=4">
+    <link rel="stylesheet" href="/assets/css/pages/producto-premium.css?v=1">
+    <link rel="stylesheet" href="/assets/css/ui/product-tiles.css?v=1">
 </head>
-<body class="bg-[#ededed] text-neutral-800 min-h-screen flex flex-col antialiased">
+<body class="storefront-product">
+    <a class="store-skip-link" href="#producto">Saltar al producto</a>
 
-    <!-- header nuevo estilo: franja azul + navbar blanca estilo Apple -->
-    <header id="main-navbar">
+    <!-- Navegación compacta compartida con la portada. -->
+    <header id="main-navbar" class="store-header">
         <div class="fx-topbar">
             <a href="/index.html" class="fx-brand" title="ELECTRONIX">
                 <img src="/assets/img/logo.svg" alt="Electronix" class="fx-brand-logo">
@@ -32,15 +34,16 @@
 
                 <div class="fx-nav-center">
                     <div class="fx-dropdown-wrapper" id="nav-cat-wrap">
-                        <button type="button" id="nav-cat-trigger" class="fx-nav-link fx-dropdown-trigger" aria-haspopup="true" aria-expanded="false">
-                            <span>Categorías</span>
+                        <button type="button" id="nav-cat-trigger" class="fx-nav-link fx-dropdown-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Explorar categorías">
+                            <svg class="store-menu-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" stroke-width="1.6" stroke-linecap="round"/></svg>
+                            <span>Productos</span>
                             <svg class="fx-chevron" width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
                     </div>
+                    <a href="/index.html#seleccion" class="fx-nav-link">Colecciones</a>
                     <a href="/productos.html?ofertas=true" class="fx-nav-link">Ofertas</a>
-                    <a href="/productos.html" class="fx-nav-link">Productos</a>
                 </div>
 
                 <div class="fx-nav-right">
@@ -62,7 +65,7 @@
                     </div>
 
                     <span id="nav-auth-container">
-                        <a href="/login.html" id="nav-login-btn" class="fx-login">Ingresar</a>
+                        <a href="/login.html" id="nav-login-btn" class="fx-login" aria-label="Ingresar a mi cuenta"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg><span>Mi cuenta</span></a>
                     </span>
                 </div>
             </div>
@@ -72,7 +75,7 @@
                     <div class="fx-mega-col">
                         <p class="fx-mega-kicker">Explorar</p>
                         <div id="nav-categories-dropdown" class="fx-mega-biglinks">
-                            <a href="/index.html">Todas las categorías</a>
+                            <a href="/productos.html">Todas las categorías</a>
                             <a href="/productos.html?categoria=Televisores">Televisores</a>
                             <a href="/productos.html?categoria=Smartphones">Smartphones</a>
                             <a href="/productos.html?categoria=Laptops">Portátiles</a>
@@ -88,10 +91,10 @@
                         <p class="fx-mega-kicker">Más de Electronix</p>
                         <div class="fx-mega-smalllinks">
                             <a href="/productos.html?ofertas=true">Ofertas</a>
-                            <a href="/productos.html">Más vendidos</a>
-                            <a href="/productos.html">Recomendados</a>
-                            <a href="/productos.html">Nuestras tiendas</a>
-                            <a href="/productos.html">Soporte</a>
+                            <a href="/productos.html?orden=recientes">Novedades</a>
+                            <a href="/index.html#seleccion">Colecciones</a>
+                            <a href="/informacion.html#contacto">Contacto</a>
+                            <a href="/informacion.html#chat">Asesoría</a>
                         </div>
                     </div>
                 </div>
@@ -123,29 +126,21 @@
         <div id="nav-backdrop" class="fx-backdrop"></div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-8 py-8 flex-1 w-full">
-        
-        <nav class="flex items-center space-x-2 text-xs text-neutral-500 mb-6 font-semibold">
-            <a href="/index.html" class="hover:text-[#3564C9] transition-colors">Inicio</a>
-            <span>/</span>
-            <a href="/productos.html" class="hover:text-[#3564C9] transition-colors">Catálogo</a>
-            <span>/</span>
-            <span id="breadcrumb-title" class="text-neutral-800 truncate max-w-xs">Cargando...</span>
+    <main id="producto" class="store-container product-main">
+        <nav class="product-breadcrumb" aria-label="Ruta de navegación">
+            <a href="/index.html">Inicio</a><span aria-hidden="true">/</span>
+            <a href="/productos.html">Catálogo</a><span aria-hidden="true">/</span>
+            <span id="breadcrumb-title" aria-current="page">Producto</span>
         </nav>
-
-        <div id="product-detail-container" class="bg-white rounded-2xl p-6 sm:p-10 border border-neutral-200 shadow-md">
-            <div class="py-20 text-center text-neutral-400">
-                <div class="w-10 h-10 border-4 border-[#3564C9]/30 border-t-[#3564C9] rounded-full animate-spin mx-auto mb-4"></div>
-                <p class="text-sm">Cargando detalles del producto...</p>
-            </div>
+        <div id="product-detail-container" aria-busy="true">
+            <p class="product-state" role="status">Estamos preparando los detalles de tu equipo…</p>
         </div>
-
     </main>
 
     <footer data-site-footer></footer>
 
     <script src="/assets/js/ui/fx-header.js"></script>
-    <script type="module" src="/assets/js/ui/footer.js"></script>
-    <script type="module" src="/assets/js/pages/producto.js"></script>
+    <script type="module" src="/assets/js/ui/footer.js?v=4"></script>
+    <script type="module" src="/assets/js/pages/producto.js?v=2"></script>
 </body>
 </html>

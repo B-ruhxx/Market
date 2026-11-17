@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="/assets/img/logo.svg">
     <link rel="stylesheet" href="/assets/css/output.css">
     <script src="/assets/js/admin-theme.js"></script>
-    <link rel="stylesheet" href="/assets/css/admin.css?v=2">
+    <link rel="stylesheet" href="/assets/css/admin.css?v=3">
     <link rel="stylesheet" href="/assets/css/admin/apariencia.css?v=2">
     <link rel="stylesheet" href="/assets/css/ui/ui-inline.css?v=2">
 </head>
@@ -138,12 +138,13 @@
                 <!-- banners -->
                 <section class="adm-card ap-card" data-panel="banners" hidden>
                     <div class="adm-card-head">
-                        <h2 class="adm-card-title">Banners promocionales</h2>
+                        <h2 class="adm-card-title">Banners promocionales <span class="adm-sub" id="ap-banners-count"></span></h2>
                         <div class="adm-actions">
                             <button class="adm-btn adm-btn-primary adm-btn-sm" id="ap-banners-nuevo">Nuevo banner</button>
                             <button class="adm-btn adm-btn-ghost adm-btn-sm" data-guardar="banners">Guardar</button>
                         </div>
                     </div>
+                    <p class="adm-sub">Bloques de igual tamaño, dos por fila en escritorio. Usa imágenes sin fondo para destacar el producto; el segundo botón es opcional.</p>
                     <div id="ap-banners-lista" class="ap-lista"></div>
                 </section>
 
@@ -182,10 +183,6 @@
             </form>
         </div>
     </div>
-
-    <footer class="adm-footer">
-        <p>© 2026 ELECTRONIX — Módulo de Administración.</p>
-    </footer>
 
     <script type="module" src="/assets/js/admin/apariencia.js?v=2"></script>
 </body>

@@ -264,10 +264,12 @@ public class PedidoServiceImpl implements PedidoService {
         // Invalidar cache de los productos comprados para evitar inconsistencias de stock (HIGH-01)
         if (cacheManager != null) {
             Cache cache = cacheManager.getCache("productos");
-            if (cache != null && pedidoGuardado.getDetalles() != null) {
-                for (DetallePedido detalle : pedidoGuardado.getDetalles()) {
-                    if (detalle.getProducto() != null && detalle.getProducto().getId() != null) {
-                        cache.evict(detalle.getProducto().getId());
+            if (cache != null) {
+                List<DetallePedido> detallesParaEvict = pedidoGuardado.getDetalles() != null ? pedidoGuardado.getDetalles() : detalles;
+                for (DetallePedido detalle : detallesParaEvict) {
+                    Producto producto = detalle.getProducto();
+                    if (producto != null && producto.getId() != null) {
+                        cache.evict(producto.getId());
                     }
                 }
             }

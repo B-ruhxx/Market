@@ -15,8 +15,10 @@ import { formatoMoneda } from '/assets/js/money.js';
 
         // paginacion: 10 por pagina
         const pager = document.getElementById('pedidos-pager');
-        const TAMANO_PAGINA = 10;
+        const tableWrap = tbody.closest('.adm-table-wrap');
+        let TAMANO_PAGINA = 10;
         let paginaActual = 0;
+        let temporizadorResize;
 
         renderAdminShell('pedidos');
 
@@ -45,6 +47,28 @@ import { formatoMoneda } from '/assets/js/money.js';
             filtroEstado.addEventListener('change', () => {
                 cargarPedidosAdmin(0);
             });
+            window.addEventListener('resize', () => {
+                clearTimeout(temporizadorResize);
+                temporizadorResize = setTimeout(() => ajustarFilasAlViewport(), 150);
+            });
+        }
+
+        function filasPorViewport() {
+            if (!window.matchMedia('(min-width: 901px)').matches || !tableWrap) return 10;
+            const fila = tbody.querySelector('tr');
+            const cabecera = tableWrap.querySelector('thead');
+            if (!fila || !cabecera) return TAMANO_PAGINA;
+            const altoDisponible = tableWrap.clientHeight - cabecera.getBoundingClientRect().height;
+            const altoFila = Math.max(1, fila.getBoundingClientRect().height);
+            return Math.max(1, Math.min(50, Math.floor(altoDisponible / altoFila)));
+        }
+
+        function ajustarFilasAlViewport() {
+            const siguienteTamano = filasPorViewport();
+            if (siguienteTamano === TAMANO_PAGINA) return;
+            const primerRegistro = paginaActual * TAMANO_PAGINA;
+            TAMANO_PAGINA = siguienteTamano;
+            cargarPedidosAdmin(Math.floor(primerRegistro / TAMANO_PAGINA));
         }
 
         async function cargarPedidosAdmin(pagina = paginaActual) {
@@ -61,6 +85,7 @@ import { formatoMoneda } from '/assets/js/money.js';
 
                 await swapSuave(tbody, () => pintarFilas(lista));
                 renderPager(pager, { pagina: paginaActual, totalPaginas, onPage: p => cargarPedidosAdmin(p) });
+                ajustarFilasAlViewport();
             } catch (err) {
                 const msg = esc(err.message);
                 await swapSuave(tbody, () => {

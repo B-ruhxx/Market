@@ -4,29 +4,157 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/svg+xml" href="/assets/img/logo.svg">
-    <title>Información — ELECTRONIX</title>
+    <title>Información y ayuda — ELECTRONIX</title>
+    <meta name="description" content="Información de Electronix sobre despachos, garantía, devoluciones y atención al cliente. Consulta las condiciones de tu compra y encuentra ayuda.">
+    <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/assets/css/output.css">
     <link rel="stylesheet" href="/assets/css/ui/ui-inline.css">
-    <link rel="stylesheet" href="/assets/css/pages/figma-home.css">
+    <link rel="stylesheet" href="/assets/css/pages/figma-home.css?v=4">
+    <link rel="stylesheet" href="/assets/css/storefront.css?v=4">
+    <link rel="stylesheet" href="/assets/css/pages/informacion.css?v=1">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js" defer></script>
 </head>
-<body class="bg-[#f5f5f7] text-neutral-800 min-h-screen flex flex-col">
-    <header class="fx-topbar"><a href="/index.html" class="fx-brand" title="ELECTRONIX"><img src="/assets/img/logo.svg" alt="Electronix" class="fx-brand-logo"><span>ELECTRONIX</span></a></header>
-    <main class="w-full max-w-4xl mx-auto px-5 py-12 sm:py-16 flex-1">
-        <a href="/index.html" class="text-sm font-bold text-[#3564C9] hover:underline">← Volver al inicio</a>
-        <h1 class="text-3xl font-black text-neutral-900 mt-5 mb-8">Información de Electronix</h1>
-        <div class="space-y-5">
-            <section id="tiendas" class="bg-white rounded-xl p-6 border border-neutral-200"><h2 class="text-xl font-extrabold">Nuestras tiendas</h2><p class="mt-2 text-sm text-neutral-600">Consulta la disponibilidad de productos en línea y coordina tu compra con nuestro equipo de atención.</p></section>
-            <section id="garantia" class="bg-white rounded-xl p-6 border border-neutral-200"><h2 class="text-xl font-extrabold">Garantía oficial</h2><p class="mt-2 text-sm text-neutral-600">Los productos cuentan con la garantía indicada en su ficha. Conserva tu comprobante de compra para solicitar atención.</p></section>
-            <section id="despachos" class="bg-white rounded-xl p-6 border border-neutral-200"><h2 class="text-xl font-extrabold">Despachos</h2><p class="mt-2 text-sm text-neutral-600">Revisaremos la dirección y el estado de tu pedido desde la sección Mis pedidos antes de coordinar el despacho.</p></section>
-            <section id="chat" class="bg-white rounded-xl p-6 border border-neutral-200"><h2 class="text-xl font-extrabold">Chat en vivo</h2><p class="mt-2 text-sm text-neutral-600">Inicia sesión y utiliza el botón de chat disponible en las páginas de la tienda para conversar con soporte.</p></section>
-            <section id="soporte" class="bg-white rounded-xl p-6 border border-neutral-200"><h2 class="text-xl font-extrabold">Soporte</h2><p class="mt-2 text-sm text-neutral-600">Nuestro equipo puede ayudarte con productos, compras, pedidos y garantía a través del chat en vivo.</p></section>
-            <section id="contacto" class="bg-white rounded-xl p-6 border border-neutral-200"><h2 class="text-xl font-extrabold">Contacto</h2><p class="mt-2 text-sm text-neutral-600">Para recibir atención personalizada, inicia sesión y abre el chat de soporte desde la tienda.</p></section>
-            <section id="empresas" class="bg-white rounded-xl p-6 border border-neutral-200"><h2 class="text-xl font-extrabold">Empresas</h2><p class="mt-2 text-sm text-neutral-600">Solicita asesoría para compras corporativas mediante nuestro canal de soporte.</p></section>
-            <section id="privacidad" class="bg-white rounded-xl p-6 border border-neutral-200"><h2 class="text-xl font-extrabold">Política de privacidad</h2><p class="mt-2 text-sm text-neutral-600">Usamos tus datos únicamente para gestionar tu cuenta, compras, pedidos y la atención solicitada dentro de Electronix.</p></section>
-            <section id="terminos" class="bg-white rounded-xl p-6 border border-neutral-200"><h2 class="text-xl font-extrabold">Términos de uso</h2><p class="mt-2 text-sm text-neutral-600">Al usar la tienda aceptas proporcionar información veraz y utilizar el servicio de forma responsable.</p></section>
-            <section id="devoluciones" class="bg-white rounded-xl p-6 border border-neutral-200"><h2 class="text-xl font-extrabold">Ventas y devoluciones</h2><p class="mt-2 text-sm text-neutral-600">Para una solicitud de devolución o consulta sobre una compra, revisa tu pedido e inicia una conversación con soporte.</p></section>
-            <section id="mapa" class="bg-white rounded-xl p-6 border border-neutral-200"><h2 class="text-xl font-extrabold">Mapa del sitio</h2><p class="mt-2 text-sm text-neutral-600"><a class="text-[#3564C9] font-bold hover:underline" href="/index.html">Inicio</a> · <a class="text-[#3564C9] font-bold hover:underline" href="/productos.html">Productos</a> · <a class="text-[#3564C9] font-bold hover:underline" href="/carrito.html">Carrito</a> · <a class="text-[#3564C9] font-bold hover:underline" href="/mis-pedidos.html">Mis pedidos</a></p></section>
+<body class="storefront-info">
+    <a class="store-skip-link" href="#ayuda">Saltar al centro de ayuda</a>
+    <header id="main-navbar" class="store-header">
+        <div class="fx-topbar">
+            <a href="/index.html" class="fx-brand" title="ELECTRONIX">
+                <img src="/assets/img/logo.svg" alt="Electronix" class="fx-brand-logo"><span>ELECTRONIX</span>
+            </a>
+        </div>
+        <nav class="fx-navbar">
+            <div class="fx-container fx-navbar-inner">
+                <div class="fx-nav-left"></div>
+                <div class="fx-nav-center">
+                    <div class="fx-dropdown-wrapper" id="nav-cat-wrap">
+                        <button type="button" id="nav-cat-trigger" class="fx-nav-link fx-dropdown-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Explorar categorías">
+                            <svg class="store-menu-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" stroke-width="1.6" stroke-linecap="round"/></svg>
+                            <span>Productos</span>
+                            <svg class="fx-chevron" width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke-width="2"/></svg>
+                        </button>
+                    </div>
+                    <a href="/index.html#seleccion" class="fx-nav-link">Colecciones</a>
+                    <a href="/productos.html?ofertas=true" class="fx-nav-link">Ofertas</a>
+                </div>
+                <div class="fx-nav-right">
+                    <button type="button" id="nav-search-toggle" class="fx-search-btn" aria-label="Buscar productos"><img src="/assets/img/busquedaicon.svg" alt=""></button>
+                    <a href="/carrito.html" class="fx-cart-btn" aria-label="Ver carrito"><img src="/assets/img/carritoicon.svg" alt=""><span id="cart-badge-top" class="fx-cart-count is-hidden">0</span></a>
+                    <div class="fx-country" id="nav-country">
+                        <button type="button" id="nav-country-btn" aria-haspopup="true" aria-expanded="false" title="Perú"><img id="nav-country-flag" src="https://flagcdn.com/pe.svg" alt="Perú" width="18" height="12"><span id="nav-country-code">PE</span></button>
+                        <div id="nav-country-menu" role="menu" aria-label="Seleccionar país"></div>
+                    </div>
+                    <span id="nav-auth-container"><a href="/login.html" id="nav-login-btn" class="fx-login" aria-label="Ingresar a mi cuenta"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg><span>Mi cuenta</span></a></span>
+                </div>
+            </div>
+            <div id="nav-mega" class="fx-mega" aria-hidden="true">
+                <div class="fx-container fx-mega-inner">
+                    <div class="fx-mega-col">
+                        <p class="fx-mega-kicker">Explorar</p>
+                        <div id="nav-categories-dropdown" class="fx-mega-biglinks"><a href="/productos.html">Todas las categorías</a><a href="/productos.html?categoria=Laptops">Portátiles</a><a href="/productos.html?categoria=Smartphones">Smartphones</a><a href="/productos.html?categoria=Audio">Audio</a></div>
+                        <div class="fx-mega-foot"><a href="/productos.html">Explorar el catálogo completo</a></div>
+                    </div>
+                    <div class="fx-mega-col"><p class="fx-mega-kicker">Podemos ayudarte</p><div class="fx-mega-smalllinks"><a href="#despachos">Despachos</a><a href="#garantia">Garantía</a><a href="#contacto">Contacto</a></div></div>
+                </div>
+            </div>
+            <div id="nav-search-panel" class="fx-search-panel" aria-hidden="true">
+                <div class="fx-container fx-search-panel-inner">
+                    <form id="nav-search-form" action="/productos.html" method="GET" role="search">
+                        <img src="/assets/img/busquedaicon.svg" alt="" aria-hidden="true">
+                        <input id="nav-search-input" type="text" name="q" placeholder="Buscar en Electronix" autocomplete="off" aria-label="Buscar en Electronix">
+                        <button type="button" id="nav-search-close" aria-label="Cerrar búsqueda">×</button>
+                    </form>
+                    <p class="fx-mega-kicker">Enlaces rápidos</p>
+                    <div class="fx-quick"><a href="/productos.html">El catálogo</a><a href="/productos.html?ofertas=true">Ofertas</a><a href="/productos.html?orden=recientes">Novedades</a></div>
+                </div>
+            </div>
+        </nav>
+        <div id="nav-backdrop" class="fx-backdrop"></div>
+    </header>
+
+    <main id="ayuda" class="store-container help-main">
+        <nav class="help-breadcrumb" aria-label="Ruta de navegación"><a href="/index.html">Inicio</a><span aria-hidden="true">/</span><span aria-current="page">Información y ayuda</span></nav>
+        <header class="help-intro">
+            <div><p class="store-eyebrow">El centro de ayuda Electronix</p><h1>Compra con información.<br>Elige con confianza.</h1></div>
+            <p>Lo que necesitas saber sobre tu compra,<br>tus pedidos y cómo podemos ayudarte.</p>
+        </header>
+        <div class="help-layout">
+            <nav class="help-menu" aria-label="Temas de ayuda">
+                <div><h2>Tu compra</h2><a href="#despachos">Envíos y despachos</a><a href="#garantia">Garantía</a><a href="#devoluciones">Cambios y devoluciones</a></div>
+                <div><h2>Hablemos</h2><a href="#soporte">Soporte</a><a href="#chat">Chat en vivo</a><a href="#contacto">Contacto</a></div>
+                <div><h2>Electronix</h2><a href="#tiendas">Nuestra tienda</a><a href="#empresas">Compras para empresas</a><a href="#mapa">Mapa del sitio</a></div>
+                <div><h2>Información legal</h2><a href="#privacidad">Privacidad</a><a href="#terminos">Términos de uso</a></div>
+            </nav>
+            <div class="help-content">
+                <section id="despachos" class="help-section">
+                    <p class="store-eyebrow">Envíos y despachos</p>
+                    <h2>De nuestra tienda a tu espacio.</h2>
+                    <p>Revisa la información de tu pedido y coordina con nuestro equipo los detalles de entrega.</p>
+                    <div class="help-dispatch">
+                        <div><h3>Revisa tu pedido</h3><p>Consulta los productos y el estado de tu compra en Mis pedidos.</p></div>
+                        <div><h3>Confirma los datos</h3><p>Verifica la dirección registrada. Si necesitas corregirla, consulta con soporte.</p></div>
+                        <div><h3>Coordina la entrega</h3><p>Confirma con el equipo las condiciones aplicables a tu pedido.</p></div>
+                    </div>
+                    <a class="store-text-link" href="/mis-pedidos.html">Consultar mis pedidos</a>
+                    <div class="help-questions" aria-label="Preguntas sobre despachos">
+                        <details><summary>¿Cuánto cuesta el envío?</summary><p>Revisa el importe indicado al realizar tu compra. Si no aparece el detalle del despacho, consulta el costo aplicable con el equipo antes de confirmar.</p></details>
+                        <details><summary>¿Cuándo llegará mi pedido?</summary><p>No se publica un plazo único para todos los pedidos. Confirma la fecha y las condiciones de entrega con nuestro equipo según tu compra y dirección.</p></details>
+                        <details><summary>¿Cómo reviso el estado de mi compra?</summary><p>Inicia sesión y abre <a href="/mis-pedidos.html">Mis pedidos</a>. Para consultas sobre el despacho, ten a mano la referencia de tu pedido.</p></details>
+                        <details><summary>¿Y si compro software o una licencia?</summary><p>Consulta con soporte la forma de entrega y activación correspondiente a la licencia. No asumas que requiere un envío físico.</p></details>
+                    </div>
+                </section>
+                <section id="garantia" class="help-section">
+                    <p class="store-eyebrow">Después de elegir</p><h2>Consulta la garantía de tu equipo.</h2>
+                    <p>La garantía depende del producto y de las condiciones aplicables a tu compra. Revisa su descripción y confirma cualquier duda con nuestro equipo antes de comprar.</p>
+                    <p>Conserva tu comprobante de compra y la referencia del pedido para solicitar atención. Describe el problema y comparte la información necesaria con soporte.</p>
+                    <a href="#chat" class="store-text-link">Consultar con soporte</a>
+                </section>
+                <section id="devoluciones" class="help-section">
+                    <p class="store-eyebrow">Tu compra</p><h2>Cambios y devoluciones.</h2>
+                    <p>Para solicitar un cambio, devolución o revisión de tu compra, consulta tu pedido e inicia una conversación con soporte. El equipo podrá revisar tu caso y las condiciones correspondientes.</p>
+                    <p>Antes de enviar un producto, solicita las indicaciones aplicables a tu caso.</p>
+                    <a href="/mis-pedidos.html" class="store-text-link">Revisar mi pedido</a>
+                </section>
+                <section id="soporte" class="help-section">
+                    <p class="store-eyebrow">Estamos para ayudarte</p><h2>No tienes que elegir a ciegas.</h2>
+                    <p>Podemos orientarte sobre productos, compras, pedidos y garantía. Cuéntanos qué necesitas para ayudarte a encontrar la información adecuada.</p>
+                    <a href="#chat" class="store-text-link">Conocer el canal de atención</a>
+                </section>
+                <section id="chat" class="help-section">
+                    <p class="store-eyebrow">Conversemos</p><h2>Tu atención, en un solo lugar.</h2>
+                    <p>El chat de soporte está disponible para usuarios que han iniciado sesión. Si tu consulta es sobre una compra, ten a mano la referencia del pedido.</p>
+                    <a id="help-open-chat" class="store-button" href="/login.html?redirect=%2Finformacion.html%23chat">Iniciar sesión para conversar</a>
+                    <p class="help-note">La disponibilidad de atención puede variar. No se garantiza una respuesta inmediata.</p>
+                </section>
+                <section id="contacto" class="help-section">
+                    <p class="store-eyebrow">Contacto</p><h2>Estamos al otro lado.</h2>
+                    <p>Para recibir atención personalizada, utiliza el chat de soporte de Electronix. Desde allí puedes consultar sobre productos y solicitar ayuda con tus pedidos.</p>
+                    <a href="#chat" class="store-text-link">Ir al chat de soporte</a>
+                </section>
+                <section id="tiendas" class="help-section">
+                    <p class="store-eyebrow">Nuestra tienda</p><h2>Explora Electronix en línea.</h2>
+                    <p>Consulta el catálogo y la disponibilidad de productos. Si necesitas orientación antes de elegir, conversa con nuestro equipo de atención.</p>
+                    <a href="/productos.html" class="store-text-link">Explorar el catálogo</a>
+                </section>
+                <section id="empresas" class="help-section">
+                    <p class="store-eyebrow">Para tu equipo</p><h2>Compras para empresas.</h2>
+                    <p>Solicita asesoría para compras corporativas mediante nuestro canal de soporte. Comparte los productos que te interesan y las cantidades que necesitas consultar.</p>
+                    <a href="#chat" class="store-text-link">Solicitar orientación</a>
+                </section>
+                <section class="help-section help-legal" aria-labelledby="help-legal-title">
+                    <h2 id="help-legal-title">Información legal.</h2>
+                    <details id="privacidad"><summary>Política de privacidad</summary><p>Usamos tus datos únicamente para gestionar tu cuenta, compras, pedidos y la atención solicitada dentro de Electronix.</p></details>
+                    <details id="terminos"><summary>Términos de uso</summary><p>Al usar la tienda aceptas proporcionar información veraz y utilizar el servicio de forma responsable.</p></details>
+                </section>
+                <section id="mapa" class="help-section">
+                    <h2>Encuentra tu camino.</h2>
+                    <nav class="help-site-map" aria-label="Mapa del sitio"><a href="/index.html">Inicio</a><a href="/productos.html">Catálogo</a><a href="/carrito.html">Carrito</a><a href="/mis-pedidos.html">Mis pedidos</a><a href="/login.html">Mi cuenta</a><a href="/registro.html">Crear una cuenta</a></nav>
+                </section>
+            </div>
         </div>
     </main>
+    <footer data-site-footer></footer>
+    <script src="/assets/js/ui/fx-header.js"></script>
+    <script type="module" src="/assets/js/pages/informacion.js"></script>
 </body>
 </html>

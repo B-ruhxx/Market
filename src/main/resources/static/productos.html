@@ -4,71 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/svg+xml" href="/assets/img/logo.svg">
-    <title>Productos — ELECTRONIX</title>
-    <meta name="description" content="Catálogo completo de Electronix: televisores, smartphones, portátiles, audio y accesorios.">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <title>Catálogo — ELECTRONIX</title>
+    <meta name="description" content="Encuentra tu próximo equipo en Electronix. Explora el catálogo y compara portátiles, smartphones, audio, periféricos y más.">
+    <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/assets/css/output.css">
-    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js" defer></script>
     <link rel="stylesheet" href="/assets/css/ui/ui-inline.css">
-    <link rel="stylesheet" href="/assets/css/pages/figma-home.css">
-    <style>
-        /* ---- Catálogo minimalista tipo referencia (Gucci-style) ---- */
-        .gf-pills{display:flex;gap:22px;overflow-x:auto;padding:12px 2px 10px;scrollbar-width:none;white-space:nowrap}
-        .gf-pills::-webkit-scrollbar{display:none}
-        .gf-pill{background:none;border:none;cursor:pointer;font-size:12px;font-weight:500;color:#6e6e73;padding:2px 0;letter-spacing:.01em}
-        .gf-pill:hover{color:#111}
-        .gf-pill.active{color:#111;font-weight:700}
-        .gf-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #e5e5e7;border-bottom:1px solid #e5e5e7;padding:10px 2px;margin-top:2px;background:#fff}
-        .gf-toolbar-count{font-size:12px;color:#424245}
-        .gf-toolbar-count button{background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-weight:600;color:#111;font-size:12px;padding:0}
-        .gf-open-btn{display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;font-size:12px;font-weight:500;color:#111;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
-        .gf-open-btn:hover{color:#3564C9}
-        .gf-open-btn .gf-dot{width:7px;height:7px;border-radius:999px;background:#3564C9;display:none}
-        .gf-open-btn.has-filters .gf-dot{display:inline-block}
-        /* Drawer */
-        .gf-overlay{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.28);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;visibility:hidden;transition:opacity .3s ease,visibility 0s linear .3s}
-        .gf-overlay.open{opacity:1;visibility:visible;transition-delay:0s}
-        .gf-drawer{position:fixed;top:0;right:0;z-index:91;height:100dvh;width:min(420px,100vw);background:#fff;display:flex;flex-direction:column;transform:translateX(102%);transition:transform .38s cubic-bezier(.32,.72,0,1);box-shadow:-20px 0 50px rgba(0,0,0,.18)}
-        .gf-drawer.open{transform:translateX(0)}
-        .gf-drawer-head{display:flex;align-items:center;justify-content:space-between;padding:26px 28px 18px}
-        .gf-drawer-title{font-size:15px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#111;margin:0}
-        .gf-clear{background:none;border:none;cursor:pointer;font-size:11px;color:#6e6e73;text-decoration:underline;text-underline-offset:3px}
-        .gf-clear:hover{color:#111}
-        .gf-drawer-body{flex:1;overflow-y:auto;padding:0 28px}
-        .gf-acc{border-bottom:1px solid #e5e5e7}
-        .gf-acc:first-child{border-top:1px solid #e5e5e7}
-        .gf-acc-btn{width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;padding:17px 0;font-size:13.5px;font-weight:500;color:#111}
-        .gf-acc-btn svg{transition:transform .25s ease}
-        .gf-acc.open .gf-acc-btn svg{transform:rotate(180deg)}
-        .gf-acc-panel{display:none;padding:0 0 20px}
-        .gf-acc.open .gf-acc-panel{display:block}
-        .gf-hint{font-size:11.5px;color:#6e6e73;margin:0 0 8px}
-        .gf-input,.gf-select{width:100%;border:none;border-bottom:1px solid #d2d2d7;background:transparent;padding:9px 2px;font-size:13px;color:#111;outline:none;border-radius:0}
-        .gf-input:focus,.gf-select:focus{border-bottom-color:#111}
-        .gf-input::placeholder{color:#9ca3af}
-        .gf-range{width:100%;accent-color:#111;cursor:pointer}
-        .gf-price-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#424245;margin-top:8px}
-        .gf-price-row strong{color:#3564C9;font-size:13px}
-        .gf-radio{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13px;color:#1d1d1f;cursor:pointer}
-        .gf-radio input{accent-color:#111}
-        .gf-cat-list{display:grid;gap:2px;max-height:220px;overflow-y:auto}
-        .gf-drawer-foot{padding:18px 28px 22px;border-top:1px solid #e5e5e7;background:#fff}
-        .gf-show-btn{width:100%;background:#111;color:#fff;border:none;border-radius:2px;padding:13px;font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
-        .gf-show-btn:hover{background:#000}
-        .gf-close{position:fixed;top:14px;right:14px;z-index:92;width:38px;height:38px;border-radius:999px;background:#111;color:#fff;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(0,0,0,.3)}
-        .gf-close:hover{background:#000;transform:scale(1.05)}
-        .gf-close.open{display:flex}
-        @media(max-width:640px){.gf-toolbar-count{font-size:11px}.gf-drawer-head{padding:22px 20px 14px}.gf-drawer-body{padding:0 20px}.gf-drawer-foot{padding:14px 20px 18px}}
-    </style>
+    <link rel="stylesheet" href="/assets/css/pages/figma-home.css?v=4">
+    <link rel="stylesheet" href="/assets/css/storefront.css?v=4">
+    <link rel="stylesheet" href="/assets/css/pages/catalogo.css?v=2">
+    <link rel="stylesheet" href="/assets/css/ui/product-tiles.css?v=1">
 </head>
-<body class="bg-[#ededed] text-neutral-800 min-h-screen flex flex-col antialiased">
+<body class="storefront-catalog">
+    <a class="store-skip-link" href="#catalogo">Saltar al catálogo</a>
 
-    <!-- header nuevo estilo: franja azul + navbar blanca estilo Apple -->
-    <header id="main-navbar">
+    <!-- Navegación compacta compartida con la portada. -->
+    <header id="main-navbar" class="store-header">
         <div class="fx-topbar">
             <a href="/index.html" class="fx-brand" title="ELECTRONIX">
                 <img src="/assets/img/logo.svg" alt="Electronix" class="fx-brand-logo">
@@ -82,15 +34,16 @@
 
                 <div class="fx-nav-center">
                     <div class="fx-dropdown-wrapper" id="nav-cat-wrap">
-                        <button type="button" id="nav-cat-trigger" class="fx-nav-link fx-dropdown-trigger" aria-haspopup="true" aria-expanded="false">
-                            <span>Categorías</span>
+                        <button type="button" id="nav-cat-trigger" class="fx-nav-link fx-dropdown-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Explorar categorías">
+                            <svg class="store-menu-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" stroke-width="1.6" stroke-linecap="round"/></svg>
+                            <span>Productos</span>
                             <svg class="fx-chevron" width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
                     </div>
+                    <a href="/index.html#seleccion" class="fx-nav-link">Colecciones</a>
                     <a href="/productos.html?ofertas=true" class="fx-nav-link">Ofertas</a>
-                    <a href="/productos.html" class="fx-nav-link">Productos</a>
                 </div>
 
                 <div class="fx-nav-right">
@@ -112,7 +65,7 @@
                     </div>
 
                     <span id="nav-auth-container">
-                        <a href="/login.html" id="nav-login-btn" class="fx-login">Ingresar</a>
+                        <a href="/login.html" id="nav-login-btn" class="fx-login" aria-label="Ingresar a mi cuenta"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg><span>Mi cuenta</span></a>
                     </span>
                 </div>
             </div>
@@ -138,10 +91,10 @@
                         <p class="fx-mega-kicker">Más de Electronix</p>
                         <div class="fx-mega-smalllinks">
                             <a href="/productos.html?ofertas=true">Ofertas</a>
-                            <a href="/productos.html?orden=recientes">Más vendidos</a>
-                            <a href="/productos.html">Recomendados</a>
-                            <a href="/productos.html">Nuestras tiendas</a>
-                            <a href="/productos.html">Soporte</a>
+                            <a href="/productos.html?orden=recientes">Novedades</a>
+                            <a href="/index.html#seleccion">Colecciones</a>
+                            <a href="/informacion.html#contacto">Contacto</a>
+                            <a href="/informacion.html#chat">Asesoría</a>
                         </div>
                     </div>
                 </div>
@@ -173,105 +126,86 @@
         <div id="nav-backdrop" class="fx-backdrop"></div>
     </header>
 
-    <!-- título de la página -->
-    <section class="elx-container pt-8 pb-2">
-        <nav class="flex items-center space-x-2 text-xs text-neutral-500 mb-3 font-semibold">
-            <a href="/index.html" class="hover:text-[#3564C9] transition-colors">Inicio</a>
-            <span>/</span>
-            <span class="text-neutral-800">Productos</span>
+    <main id="catalogo" class="store-container catalog-main">
+        <nav class="catalog-breadcrumb" aria-label="Ruta de navegación">
+            <a href="/index.html">Inicio</a><span aria-hidden="true">/</span><span aria-current="page">Catálogo</span>
         </nav>
-        <h1 class="font-['Montserrat',sans-serif] text-3xl sm:text-4xl font-extrabold text-neutral-900 tracking-tight">Productos</h1>
-        <p class="text-sm text-neutral-500 mt-1">Catálogo con stock en tiempo real</p>
-    </section>
-
-    <!-- pills de categorías (siempre visibles) -->
-    <div class="elx-container">
-        <nav id="cat-pills" class="gf-pills" aria-label="Categorías"></nav>
-        <div class="gf-toolbar">
-            <p class="gf-toolbar-count"><span id="results-count">Cargando catálogo...</span>&nbsp;ordenados por&nbsp;<button type="button" id="order-current-label">Recomendaciones</button></p>
-            <button type="button" id="btn-open-filters" class="gf-open-btn">
-                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 5h18M7 12h10M10 19h4"></path><circle cx="17" cy="5" r="2" fill="currentColor" stroke="none"></circle><circle cx="7" cy="12" r="2" fill="currentColor" stroke="none"></circle><circle cx="15" cy="19" r="2" fill="currentColor" stroke="none"></circle></svg>
-                <span>Filtrar y ordenar</span>
-                <span class="gf-dot" id="filter-active-dot"></span>
+        <header class="catalog-intro">
+            <div><p class="store-eyebrow">El catálogo Electronix</p><h1>Encuentra tu<br>próximo equipo.</h1></div>
+            <p>Para tus ideas, tus partidas y tu día a día.<br>Explora, compara y elige lo que va contigo.</p>
+        </header>
+        <nav id="cat-pills" class="catalog-categories" aria-label="Filtrar por categoría"></nav>
+        <div class="catalog-toolbar">
+            <form id="catalog-search-form" class="catalog-search" role="search">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg>
+                <input id="filter-search" type="search" placeholder="¿Qué equipo estás buscando?" aria-label="Buscar en el catálogo" autocomplete="off">
+            </form>
+            <label class="catalog-order" for="filter-order"><span>Ordenar por</span>
+                <select id="filter-order">
+                    <option value="fechaCreacion:desc">Más recientes</option>
+                    <option value="precio:asc">Menor precio</option>
+                    <option value="precio:desc">Mayor precio</option>
+                    <option value="nombre:asc">Nombre: A–Z</option>
+                </select>
+            </label>
+            <button type="button" id="btn-open-filters" class="catalog-filter-button" aria-controls="filter-drawer" aria-expanded="false">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><path d="M9 4v6M15 14v6"/></svg>
+                Filtros <span id="filter-active-count" hidden></span>
             </button>
         </div>
-    </div>
-
-    <!-- catalogo: listado -->
-    <main id="catalogo" class="elx-container elx-catalogo pt-4">
-
-        <div id="products-container" class="elx-products-grid">
-            <div class="elx-estado-carga">
-                <div class="elx-spinner"></div>
-                <p class="elx-estado-carga-texto">Cargando productos de Electronix...</p>
-            </div>
+        <div class="catalog-results-bar">
+            <p id="results-count" role="status" aria-live="polite" aria-atomic="true">Cargando catálogo…</p>
+            <div id="active-filters" class="catalog-active-filters" aria-label="Filtros aplicados"></div>
         </div>
-
-        <div id="pagination-container" class="elx-pagination is-hidden">
-            <button id="prev-page" class="elx-page-btn">Anterior</button>
-            <span id="page-info" class="elx-page-indicator">Página 1 de 1</span>
-            <button id="next-page" class="elx-page-btn">Siguiente</button>
+        <div id="products-container" class="elx-products-grid" aria-busy="true">
+            <div class="catalog-state" role="status"><p>Estamos preparando el catálogo…</p></div>
         </div>
-
+        <nav id="pagination-container" class="catalog-pagination" aria-label="Páginas del catálogo" hidden>
+            <button type="button" id="prev-page">Anterior</button>
+            <span id="page-info" aria-live="polite">Página 1 de 1</span>
+            <button type="button" id="next-page">Siguiente</button>
+        </nav>
+        <section class="catalog-help" aria-label="Ayuda para elegir">
+            <div><h2>¿Todavía no sabes cuál elegir?</h2><p>Cuéntanos qué necesitas. Te ayudamos a encontrar tu equipo.</p></div>
+            <a href="/informacion.html#chat" class="store-text-link">Hablar con el equipo</a>
+        </section>
     </main>
 
-    <!-- Drawer Filtrar y ordenar (solo lo que tu tienda puede filtrar) -->
-    <div id="filter-overlay" class="gf-overlay"></div>
-    <button type="button" id="btn-close-filters" class="gf-close" aria-label="Cerrar filtros">
-        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M6 18L18 6M6 6l12 12"></path></svg>
-    </button>
-    <aside id="filter-drawer" class="gf-drawer" aria-hidden="true" aria-label="Filtrar y ordenar">
-        <div class="gf-drawer-head">
-            <h2 class="gf-drawer-title">Filtrar y ordenar</h2>
-            <button type="button" id="btn-limpiar-filtros" class="gf-clear">Borrar todo</button>
+    <!-- Los filtros usan el catálogo real y se aplican al instante. -->
+    <div id="filter-overlay" class="catalog-overlay"></div>
+    <aside id="filter-drawer" class="catalog-drawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="filter-title" inert>
+        <div class="catalog-drawer-head">
+            <h2 id="filter-title">Afina tu búsqueda.</h2>
+            <button type="button" id="btn-close-filters" class="catalog-close" aria-label="Cerrar filtros">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg>
+            </button>
         </div>
-        <div class="gf-drawer-body">
-            <div class="gf-acc open">
-                <button type="button" class="gf-acc-btn"><span>Buscar</span><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>
-                <div class="gf-acc-panel">
-                    <p class="gf-hint">Filtra por nombre del producto</p>
-                    <input id="filter-search" type="text" placeholder="Ej. MacBook, Smart TV..." class="gf-input" />
-                </div>
+        <div class="catalog-drawer-body">
+            <p class="catalog-hint">Los resultados se actualizan al cambiar los filtros.</p>
+            <div class="catalog-filter-group">
+                <label for="filter-categoria">Categoría</label>
+                <select id="filter-categoria"><option value="">Todas las categorías</option></select>
             </div>
-            <div class="gf-acc open">
-                <button type="button" class="gf-acc-btn"><span>Categorías</span><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>
-                <div class="gf-acc-panel">
-                    <p class="gf-hint">Elige una categoría del catálogo</p>
-                    <select id="filter-categoria" class="gf-select">
-                        <option value="">Todas las categorías</option>
-                    </select>
-                </div>
+            <div class="catalog-filter-group">
+                <label for="filter-price">Precio máximo <output id="price-val" for="filter-price">Sin límite</output></label>
+                <input id="filter-price" type="range" min="0" max="10000" step="100" value="10000">
+                <p class="catalog-hint">Importe en la moneda de cada producto.</p>
             </div>
-            <div class="gf-acc open">
-                <button type="button" class="gf-acc-btn"><span>Precio</span><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>
-                <div class="gf-acc-panel">
-                    <p class="gf-hint">Precio máximo</p>
-                    <input id="filter-price" type="range" min="0" max="10000" step="100" value="10000" class="gf-range">
-                    <div class="gf-price-row"><span>Hasta</span><strong id="price-val">S/ 10,000</strong></div>
-                </div>
+            <div class="catalog-filter-group">
+                <label class="catalog-check" for="filter-offers"><input id="filter-offers" type="checkbox"> Solo productos en oferta</label>
             </div>
-            <div class="gf-acc open">
-                <button type="button" class="gf-acc-btn"><span>Ordenar por</span><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>
-                <div class="gf-acc-panel">
-                    <select id="filter-order" class="gf-select">
-                        <option value="fechaCreacion:desc">Recomendaciones</option>
-                        <option value="precio:asc">Precio: Menor a Mayor</option>
-                        <option value="precio:desc">Precio: Mayor a Menor</option>
-                        <option value="nombre:asc">Nombre: A - Z</option>
-                    </select>
-                </div>
-            </div>
+            <button type="button" id="btn-limpiar-filtros" class="catalog-clear">Limpiar filtros</button>
         </div>
-        <div class="gf-drawer-foot">
-            <button type="button" id="btn-apply-filters" class="gf-show-btn">Mostrar artículos</button>
+        <div class="catalog-drawer-foot">
+            <button type="button" id="btn-apply-filters" class="store-button">Ver productos</button>
         </div>
     </aside>
 
     <footer data-site-footer></footer>
 
     <script src="/assets/js/ui/fx-header.js"></script>
-    <script type="module" src="/assets/js/ui/footer.js"></script>
-    <script type="module" src="/assets/js/pages/productos.js"></script>
+    <script type="module" src="/assets/js/ui/footer.js?v=4"></script>
+    <script type="module" src="/assets/js/pages/productos.js?v=3"></script>
 </body>
 
 </html>

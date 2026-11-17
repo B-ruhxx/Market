@@ -6,10 +6,20 @@ import { formatoMoneda } from '/assets/js/money.js';
 
         renderAdminShell('dashboard');
 
+        let tamanoOrdenesActual = 0;
+        let temporizadorResize;
+
         if (!auth.protegerRutaAdmin()) {
             // redirige
         } else {
             cargarDashboard();
+            window.addEventListener('resize', () => {
+                clearTimeout(temporizadorResize);
+                temporizadorResize = setTimeout(() => {
+                    const siguienteTamano = filasOrdenesPorViewport();
+                    if (siguienteTamano !== tamanoOrdenesActual) cargarDashboard();
+                }, 150);
+            });
         }
 
         const fmt = v => formatoMoneda(Number(v) || 0, 'PEN');
@@ -20,6 +30,18 @@ import { formatoMoneda } from '/assets/js/money.js';
             return String(v ?? '')
                 .replace(/&/g,'&amp;').replace(/</g,'&lt;')
                 .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
+        function filasOrdenesPorViewport() {
+            if (!window.matchMedia('(min-width: 901px)').matches) return 5;
+            const scroll = document.querySelector('.db-tabla-scroll');
+            const tbody = document.getElementById('table-pedidos-body');
+            const cabecera = scroll?.querySelector('thead');
+            if (!scroll || !cabecera) return 5;
+            const fila = Array.from(tbody?.rows || []).find(row => !row.querySelector('.db-empty'));
+            const altoFila = Math.max(1, fila?.getBoundingClientRect().height || 52);
+            const altoDisponible = scroll.clientHeight - cabecera.getBoundingClientRect().height;
+            return Math.max(1, Math.min(25, Math.floor(altoDisponible / altoFila)));
         }
 
         async function cargarDashboard() {
@@ -54,12 +76,14 @@ import { formatoMoneda } from '/assets/js/money.js';
                     }
                 }
 
-                // 2. Últimas órdenes (máx. 5)
-                const pedRes = await api.get('/api/pedidos?size=5');
+                // 2. Últimas órdenes: el límite coincide con las filas que caben.
+                const tamanoOrdenes = filasOrdenesPorViewport();
+                const pedRes = await api.get(`/api/pedidos?size=${tamanoOrdenes}`);
                 const tbody = document.getElementById('table-pedidos-body');
 
                 if (pedRes.exito && pedRes.datos && pedRes.datos.contenido.length > 0) {
                     const items = pedRes.datos.contenido;
+                    tamanoOrdenesActual = tamanoOrdenes;
                     document.getElementById('orders-count').textContent = items.length;
                     tbody.innerHTML = '';
                     items.forEach(p => {
@@ -96,6 +120,7 @@ import { formatoMoneda } from '/assets/js/money.js';
                         `;
                     });
                 } else {
+                    tamanoOrdenesActual = tamanoOrdenes;
                     tbody.innerHTML = `
                         <tr><td colspan="6">
                             <div class="db-empty">

@@ -117,12 +117,12 @@
         }
 
         /* diseno principal: es para la tabla y sidebar */
-        .db-main-grid {
-            display: grid;
-            grid-template-columns: 1fr 320px;
-            gap: 18px;
-            align-items: start;
-        }
+.db-main-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 18px;
+    align-items: start;
+}
         @media (max-width: 1024px) { .db-main-grid { grid-template-columns: 1fr; } }
 
         /* diseno panel de tabla: es para el apartado de panel de tabla */
@@ -386,3 +386,57 @@
 .db-th-acciones{min-width:130px}
 .db-vacio-icono{opacity:.25}
 .db-error-icono{opacity:.2}
+
+/* El bloque inferior termina al mismo nivel que el sidebar. Las órdenes que
+   se solicitan se ajustan a la altura disponible del panel. */
+@media (min-width: 901px) {
+    .adm-dashboard-page .db-main-grid {
+        flex: 1 1 auto;
+        min-height: 0;
+        align-items: stretch;
+    }
+
+    .adm-dashboard-page .db-panel,
+    .adm-dashboard-page .db-sidebar,
+    .adm-dashboard-page .db-activity {
+        min-height: 0;
+    }
+
+    .adm-dashboard-page .db-panel {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .adm-dashboard-page .db-tabla-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
+    }
+
+    .adm-dashboard-page .db-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .adm-dashboard-page .db-sidebar,
+    .adm-dashboard-page .db-activity {
+        height: 100%;
+    }
+
+    .adm-dashboard-page .db-activity {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .adm-dashboard-page .db-action-list {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .adm-dashboard-page .db-action-item {
+        flex: 1 1 0;
+    }
+}
