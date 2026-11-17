@@ -36,7 +36,7 @@
 .crm-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
     background: var(--adm-card);
     border: 1px solid var(--adm-line);
     border-radius: 20px;
@@ -62,6 +62,26 @@
     border-color: var(--adm-teal);
     color: #ffffff;
     box-shadow: 0 4px 12px rgba(53, 100, 201, 0.28);
+}
+
+.crm-chip-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+}
+
+.crm-chip-dot--vip { background: #6366f1; }
+.crm-chip-dot--activo { background: #10b981; }
+.crm-chip-dot--riesgo { background: #f59e0b; }
+.crm-chip-dot--prospecto { background: #3b82f6; }
+.crm-chip-dot--inactivo { background: #94a3b8; }
+
+.crm-chip.is-active .crm-chip-dot {
+    background: #ffffff;
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
 }
 
 .crm-search-box {
@@ -98,7 +118,7 @@
 .badge-tier {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     font-size: 0.67rem;
     font-weight: 800;
     letter-spacing: 0.06em;

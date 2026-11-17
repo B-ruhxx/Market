@@ -18,7 +18,7 @@ let temporizadorResize;
 renderAdminShell('crm-clientes');
 
 if (!auth.protegerRutaAdmin()) {
-    // Redirige si no tiene rol admin
+    // Redirige al login si no está autenticado o no es admin
 } else if (!auth.tienePermiso('CRM_GESTIONAR')) {
     showToast('No tienes permiso para gestionar CRM Clientes', 'error');
     setTimeout(() => { window.location.href = '/admin/dashboard.html'; }, 1000);
@@ -54,8 +54,12 @@ async function iniciar() {
     // Filtros por chips
     document.querySelectorAll('.btn-filtro-seg').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.btn-filtro-seg').forEach(b => b.classList.remove('is-active'));
+            document.querySelectorAll('.btn-filtro-seg').forEach(b => {
+                b.classList.remove('is-active');
+                b.setAttribute('aria-selected', 'false');
+            });
             btn.classList.add('is-active');
+            btn.setAttribute('aria-selected', 'true');
             filtroSegmentoActual = btn.dataset.segmento || '';
             paginaActual = 0;
             aplicarFiltros();
@@ -64,7 +68,7 @@ async function iniciar() {
 
     // Buscador con debounce
     let debounceTimer;
-    $('input-buscar-cliente')?.addEventListener('input', e => {
+    $('input-buscar-cliente')?.addEventListener('input', () => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
             paginaActual = 0;
@@ -81,10 +85,14 @@ async function iniciar() {
     // Pestañas del modal
     document.querySelectorAll('.crm-tab-btn').forEach(tabBtn => {
         tabBtn.addEventListener('click', () => {
-            document.querySelectorAll('.crm-tab-btn').forEach(b => b.classList.remove('active', 'is-active'));
+            document.querySelectorAll('.crm-tab-btn').forEach(b => {
+                b.classList.remove('active', 'is-active');
+                b.setAttribute('aria-selected', 'false');
+            });
             document.querySelectorAll('.crm-tab-content').forEach(c => c.classList.add('hidden'));
 
             tabBtn.classList.add('active', 'is-active');
+            tabBtn.setAttribute('aria-selected', 'true');
             const targetId = tabBtn.dataset.tab;
             const targetEl = $(targetId);
             if (targetEl) targetEl.classList.remove('hidden');
@@ -109,7 +117,7 @@ async function cargarClientes() {
     }
 
     try {
-        const res = await api.get('/api/admin/crm/clientes/360');
+        const res = await api.get('/api/admin/crm/clientes');
         if (!res.exito || !Array.isArray(res.datos)) {
             throw new Error(res.mensaje || 'Error al obtener clientes');
         }
@@ -144,24 +152,24 @@ function aplicarFiltros() {
 
 function obtenerBadgeNivel(nivel) {
     const n = (nivel || 'BRONCE').toUpperCase();
-    if (n === 'ORO') return '<span class="badge-tier badge-tier--oro">👑 ORO</span>';
-    if (n === 'PLATA') return '<span class="badge-tier badge-tier--plata">🥈 PLATA</span>';
-    return '<span class="badge-tier badge-tier--bronce">🥉 BRONCE</span>';
+    if (n === 'ORO') return '<span class="badge-tier badge-tier--oro">Oro</span>';
+    if (n === 'PLATA') return '<span class="badge-tier badge-tier--plata">Plata</span>';
+    return '<span class="badge-tier badge-tier--bronce">Bronce</span>';
 }
 
 function obtenerBadgeSegmento(segmento, label) {
     const s = (segmento || '').toUpperCase();
-    const txt = esc(label || s || 'INACTIVO');
+    const txt = esc(label || s || 'Inactivo');
     if (s === 'VIP') {
-        return `<span class="adm-badge b-vip">👑 ${txt}</span>`;
+        return `<span class="adm-badge b-vip">${txt}</span>`;
     } else if (s === 'ACTIVO') {
-        return `<span class="adm-badge b-ok">⚡ ${txt}</span>`;
+        return `<span class="adm-badge b-ok">${txt}</span>`;
     } else if (s === 'EN_RIESGO') {
-        return `<span class="adm-badge b-pendiente">⚠️ ${txt}</span>`;
+        return `<span class="adm-badge b-pendiente">${txt}</span>`;
     } else if (s === 'PROSPECTO') {
-        return `<span class="adm-badge b-proceso">🌱 ${txt}</span>`;
+        return `<span class="adm-badge b-proceso">${txt}</span>`;
     } else if (s === 'INACTIVO') {
-        return `<span class="adm-badge b-off">💤 ${txt}</span>`;
+        return `<span class="adm-badge b-off">${txt}</span>`;
     }
     return `<span class="adm-badge b-off">${txt}</span>`;
 }
@@ -174,7 +182,7 @@ async function renderizarTablaClientes(lista) {
 
     if (!lista || lista.length === 0) {
         await swapSuave(tbody, () => {
-            tbody.innerHTML = '<tr><td colspan="8" class="adm-empty">No se encontraron clientes para este criterio.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="adm-empty">No se encontraron clientes que coincidan con el criterio seleccionado.</td></tr>';
         });
         if (pager) pager.setAttribute('hidden', '');
         return;
@@ -222,7 +230,7 @@ async function renderizarTablaClientes(lista) {
                 </td>
                 <td class="num adm-celda-num">
                     <button type="button" class="btn-ver-360 adm-btn adm-btn-edit adm-btn-sm" data-id="${c.usuarioId}">
-                        Ver 360° →
+                        Ver 360°
                     </button>
                 </td>
             </tr>`;
@@ -263,7 +271,7 @@ async function abrirFicha360(usuarioId) {
     $('input-nueva-nota').value = '';
 
     try {
-        const res = await api.get(`/api/admin/crm/clientes/360/${usuarioId}`);
+        const res = await api.get(`/api/admin/crm/clientes/${usuarioId}/360`);
         if (!res.exito || !res.datos) {
             throw new Error(res.mensaje || 'Error al obtener ficha 360°');
         }
@@ -280,9 +288,9 @@ function pintarFicha360(c) {
     $('m360-nombre').textContent = c.nombre || 'Sin nombre';
 
     const nivelBadge = $('m360-badge-nivel');
-    const n = (c.nivel || 'BRONCE').toUpperCase();
+    const n = (c.nivelActual || c.nivel || 'BRONCE').toUpperCase();
     nivelBadge.className = `badge-tier badge-tier--${n.toLowerCase()}`;
-    nivelBadge.textContent = n;
+    nivelBadge.textContent = n.charAt(0) + n.slice(1).toLowerCase();
 
     const segBadge = $('m360-badge-segmento');
     segBadge.outerHTML = `<span id="m360-badge-segmento">${obtenerBadgeSegmento(c.segmento, c.segmentoLabel)}</span>`;
@@ -297,7 +305,7 @@ function pintarFicha360(c) {
     $('m360-ticket').textContent = `S/ ${ticket}`;
     $('m360-recencia').textContent = c.diasDesdeUltimaCompra !== null ? `${c.diasDesdeUltimaCompra} d` : '—';
     $('m360-puntos').textContent = c.saldoPuntos || 0;
-    const puntosPen = Number(c.puntosEquivalentePen || 0).toFixed(2);
+    const puntosPen = Number(c.valorEstimadoPuntosPen ?? c.puntosEquivalentePen ?? 0).toFixed(2);
     $('m360-puntos-pen').textContent = `≈ S/ ${puntosPen} en saldo`;
 
     // Diagnóstico
@@ -327,7 +335,7 @@ function pintarFicha360(c) {
                     <td><span class="adm-badge ${estadoClass}">${esc(p.estado)}</span></td>
                     <td><span class="adm-badge ${pagoClass}">${esc(p.estadoPago)}</span></td>
                     <td class="num">
-                        <a href="/admin/pedidos.html" class="adm-link">Ver orden →</a>
+                        <a href="/admin/pedidos.html" class="adm-link">Ver orden</a>
                     </td>
                 </tr>`;
             }).join('');
@@ -335,7 +343,7 @@ function pintarFicha360(c) {
     }
 
     // Transacciones de puntos
-    const txs = c.transaccionesPuntos || [];
+    const txs = c.ultimasTransacciones || c.transaccionesPuntos || [];
     const tbodyTxs = $('m360-tbody-transacciones');
     if (tbodyTxs) {
         if (txs.length === 0) {
@@ -396,7 +404,7 @@ async function registrarNota(e) {
     btn.disabled = true;
 
     try {
-        const res = await api.post(`/api/admin/crm/clientes/360/${clienteActivoId}/notas`, { contenido });
+        const res = await api.post(`/api/admin/crm/clientes/${clienteActivoId}/notas`, { contenido });
         if (!res.exito || !res.datos) {
             throw new Error(res.mensaje || 'Error al registrar nota');
         }
@@ -404,7 +412,7 @@ async function registrarNota(e) {
         showToast('Nota registrada correctamente', 'success');
 
         // Recargar ficha activa
-        const recarga = await api.get(`/api/admin/crm/clientes/360/${clienteActivoId}`);
+        const recarga = await api.get(`/api/admin/crm/clientes/${clienteActivoId}/360`);
         if (recarga.exito && recarga.datos) {
             pintarFicha360(recarga.datos);
         }
@@ -433,7 +441,7 @@ function exportarCSV() {
         `"${(c.nombre || '').replace(/"/g, '""')}"`,
         `"${(c.email || '').replace(/"/g, '""')}"`,
         `"${(c.numeroDocumento || '').replace(/"/g, '""')}"`,
-        c.nivel || 'BRONCE',
+        c.nivel || 'Bronce',
         c.segmento || 'INACTIVO',
         Number(c.ltvPen || 0).toFixed(2),
         c.totalPedidos || 0,

@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/assets/css/output.css">
     <script src="/assets/js/admin-theme.js"></script>
     <link rel="stylesheet" href="/assets/css/admin.css?v=5">
-    <link rel="stylesheet" href="/assets/css/admin/crm-clientes.css?v=3">
+    <link rel="stylesheet" href="/assets/css/admin/crm-clientes.css?v=4">
     <link rel="stylesheet" href="/assets/css/ui/ui-inline.css?v=2">
 </head>
 <body class="adm">
@@ -41,24 +41,29 @@
 
         <!-- Barra de filtros de segmentación y buscador -->
         <div class="crm-toolbar">
-            <div class="crm-chips-group" id="filtros-segmento-wrap">
-                <button type="button" class="btn-filtro-seg crm-chip is-active" data-segmento="">
+            <div class="crm-chips-group" id="filtros-segmento-wrap" role="tablist" aria-label="Filtrar clientes por segmento">
+                <button type="button" class="btn-filtro-seg crm-chip is-active" data-segmento="" role="tab" aria-selected="true">
                     <span>Todos</span>
                 </button>
-                <button type="button" class="btn-filtro-seg crm-chip" data-segmento="VIP">
-                    <span>👑 VIP</span>
+                <button type="button" class="btn-filtro-seg crm-chip" data-segmento="VIP" role="tab" aria-selected="false">
+                    <span class="crm-chip-dot crm-chip-dot--vip"></span>
+                    <span>VIP</span>
                 </button>
-                <button type="button" class="btn-filtro-seg crm-chip" data-segmento="ACTIVO">
-                    <span>⚡ Activo</span>
+                <button type="button" class="btn-filtro-seg crm-chip" data-segmento="ACTIVO" role="tab" aria-selected="false">
+                    <span class="crm-chip-dot crm-chip-dot--activo"></span>
+                    <span>Activos</span>
                 </button>
-                <button type="button" class="btn-filtro-seg crm-chip" data-segmento="EN_RIESGO">
-                    <span>⚠️ En Riesgo</span>
+                <button type="button" class="btn-filtro-seg crm-chip" data-segmento="EN_RIESGO" role="tab" aria-selected="false">
+                    <span class="crm-chip-dot crm-chip-dot--riesgo"></span>
+                    <span>En Riesgo</span>
                 </button>
-                <button type="button" class="btn-filtro-seg crm-chip" data-segmento="PROSPECTO">
-                    <span>🌱 Prospecto</span>
+                <button type="button" class="btn-filtro-seg crm-chip" data-segmento="PROSPECTO" role="tab" aria-selected="false">
+                    <span class="crm-chip-dot crm-chip-dot--prospecto"></span>
+                    <span>Prospectos</span>
                 </button>
-                <button type="button" class="btn-filtro-seg crm-chip" data-segmento="INACTIVO">
-                    <span>💤 Inactivo</span>
+                <button type="button" class="btn-filtro-seg crm-chip" data-segmento="INACTIVO" role="tab" aria-selected="false">
+                    <span class="crm-chip-dot crm-chip-dot--inactivo"></span>
+                    <span>Inactivos</span>
                 </button>
             </div>
             <div class="crm-search-box">
@@ -111,8 +116,8 @@
                     <div class="crm-modal-title-wrap">
                         <div class="crm-modal-name-row">
                             <h2 id="m360-nombre" class="crm-modal-name">Nombre Cliente</h2>
-                            <span id="m360-badge-nivel" class="badge-tier badge-tier--bronce">BRONCE</span>
-                            <span id="m360-badge-segmento" class="adm-badge b-ok">ACTIVO</span>
+                            <span id="m360-badge-nivel" class="badge-tier badge-tier--bronce">Bronce</span>
+                            <span id="m360-badge-segmento" class="adm-badge b-ok">Activo</span>
                         </div>
                         <p id="m360-meta" class="crm-modal-meta">cliente@correo.com · DNI 00000000 · Miembro desde 2026</p>
                     </div>
@@ -123,18 +128,18 @@
             </div>
 
             <!-- Navegación por pestañas -->
-            <div class="crm-tabs-nav">
-                <button type="button" class="crm-tab-btn active" data-tab="tab-resumen">
+            <div class="crm-tabs-nav" role="tablist">
+                <button type="button" class="crm-tab-btn active" data-tab="tab-resumen" role="tab" aria-selected="true">
                     <span>Resumen RFM</span>
                 </button>
-                <button type="button" class="crm-tab-btn" data-tab="tab-pedidos">
+                <button type="button" class="crm-tab-btn" data-tab="tab-pedidos" role="tab" aria-selected="false">
                     <span>Pedidos</span>
                     <span id="m360-badge-num-pedidos" class="crm-tab-counter">0</span>
                 </button>
-                <button type="button" class="crm-tab-btn" data-tab="tab-recompensas">
+                <button type="button" class="crm-tab-btn" data-tab="tab-recompensas" role="tab" aria-selected="false">
                     <span>Puntos & Cupones</span>
                 </button>
-                <button type="button" class="crm-tab-btn" data-tab="tab-notas">
+                <button type="button" class="crm-tab-btn" data-tab="tab-notas" role="tab" aria-selected="false">
                     <span>Notas Internas</span>
                     <span id="m360-badge-num-notas" class="crm-tab-counter">0</span>
                 </button>
@@ -179,7 +184,9 @@
                         <div class="adm-stat">
                             <div class="adm-stat-top">
                                 <span class="adm-stat-label">Puntos Saldo</span>
-                                <span class="adm-icon-chip violet">★</span>
+                                <span class="adm-icon-chip violet">
+                                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                </span>
                             </div>
                             <div class="adm-stat-value" id="m360-puntos">0</div>
                             <p class="adm-stat-cap" id="m360-puntos-pen">≈ S/ 0.00 en saldo</p>
@@ -190,7 +197,7 @@
                     <div class="crm-diag-card">
                         <div class="crm-diag-head">
                             <h4 class="crm-diag-title">Diagnóstico y Recomendación Comercial</h4>
-                            <span id="m360-diag-badge" class="adm-badge b-ok">ACTIVO</span>
+                            <span id="m360-diag-badge" class="adm-badge b-ok">Activo</span>
                         </div>
                         <p id="m360-diag-desc" class="crm-diag-body">Cargando diagnóstico…</p>
                     </div>
@@ -264,6 +271,6 @@
         </div>
     </div>
 
-    <script type="module" src="/assets/js/admin/crm-clientes.js?v=3"></script>
+    <script type="module" src="/assets/js/admin/crm-clientes.js?v=4"></script>
 </body>
 </html>
