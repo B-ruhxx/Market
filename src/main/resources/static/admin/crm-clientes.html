@@ -7,15 +7,15 @@
     <link rel="icon" type="image/svg+xml" href="/assets/img/logo.svg">
     <link rel="stylesheet" href="/assets/css/output.css">
     <script src="/assets/js/admin-theme.js"></script>
-    <link rel="stylesheet" href="/assets/css/admin.css?v=2">
-    <link rel="stylesheet" href="/assets/css/admin/crm-clientes.css?v=2">
+    <link rel="stylesheet" href="/assets/css/admin.css?v=5">
+    <link rel="stylesheet" href="/assets/css/admin/crm-clientes.css?v=3">
     <link rel="stylesheet" href="/assets/css/ui/ui-inline.css?v=2">
 </head>
 <body class="adm">
 
     <header id="main-navbar"></header>
 
-    <main class="adm-main">
+    <main class="adm-main adm-table-page">
 
         <!-- Encabezado de página -->
         <div class="adm-pagehead">
@@ -81,8 +81,8 @@
                             <th>Nivel VIP</th>
                             <th>Segmento RFM</th>
                             <th class="num">LTV Histórico</th>
-                            <th style="text-align: center;">Pedidos</th>
-                            <th style="text-align: center;">Última Compra</th>
+                            <th class="center">Pedidos</th>
+                            <th class="center">Última Compra</th>
                             <th class="num">Puntos</th>
                             <th class="num">Acciones</th>
                         </tr>
@@ -94,8 +94,8 @@
                     </tbody>
                 </table>
             </div>
-            <!-- Paginador -->
-            <div id="crm-pager" class="adm-pager"></div>
+            <!-- Paginador estándar con soporte responsivo -->
+            <div id="crm-pager" class="adm-pager" hidden></div>
         </div>
 
     </main>
@@ -148,145 +148,115 @@
                     <div class="adm-grid-stats cols-4">
                         <div class="adm-stat">
                             <div class="adm-stat-top">
-                                <span class="adm-stat-label">LTV Facturado</span>
-                                <span class="adm-icon-chip teal">S/</span>
+                                <span class="adm-stat-label">LTV Total</span>
+                                <span class="adm-icon-chip teal">
+                                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </span>
                             </div>
-                            <div id="rfm-ltv" class="adm-stat-value" style="color: #059669;">S/ 0.00</div>
-                            <p class="adm-stat-cap">Total neto pagado</p>
+                            <div class="adm-stat-value" id="m360-ltv">S/ 0.00</div>
+                            <p class="adm-stat-cap">Total facturado en tienda</p>
                         </div>
                         <div class="adm-stat">
                             <div class="adm-stat-top">
                                 <span class="adm-stat-label">Ticket Promedio</span>
                                 <span class="adm-icon-chip blue">
-                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                                 </span>
                             </div>
-                            <div id="rfm-ticket" class="adm-stat-value">S/ 0.00</div>
-                            <p class="adm-stat-cap">Por compra aprobada</p>
+                            <div class="adm-stat-value" id="m360-ticket">S/ 0.00</div>
+                            <p class="adm-stat-cap">Gasto promedio por orden</p>
                         </div>
                         <div class="adm-stat">
                             <div class="adm-stat-top">
-                                <span class="adm-stat-label">Recencia</span>
+                                <span class="adm-stat-label">Recencia (R)</span>
                                 <span class="adm-icon-chip amber">
-                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 </span>
                             </div>
-                            <div id="rfm-recencia" class="adm-stat-value" style="color: #d97706;">0 días</div>
-                            <p class="adm-stat-cap">Desde última compra</p>
+                            <div class="adm-stat-value" id="m360-recencia">0 d</div>
+                            <p class="adm-stat-cap">Días desde última compra</p>
                         </div>
                         <div class="adm-stat">
                             <div class="adm-stat-top">
                                 <span class="adm-stat-label">Puntos Saldo</span>
                                 <span class="adm-icon-chip violet">★</span>
                             </div>
-                            <div id="rfm-saldo-puntos" class="adm-stat-value" style="color: var(--adm-teal);">0 pts</div>
-                            <p id="rfm-valor-puntos" class="adm-stat-cap">≈ S/ 0.00</p>
+                            <div class="adm-stat-value" id="m360-puntos">0</div>
+                            <p class="adm-stat-cap" id="m360-puntos-pen">≈ S/ 0.00 en saldo</p>
                         </div>
                     </div>
 
+                    <!-- Diagnóstico de Segmentación -->
                     <div class="crm-diag-card">
                         <div class="crm-diag-head">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            <span>Diagnóstico de Segmentación Comercial</span>
+                            <h4 class="crm-diag-title">Diagnóstico y Recomendación Comercial</h4>
+                            <span id="m360-diag-badge" class="adm-badge b-ok">ACTIVO</span>
                         </div>
-                        <p id="rfm-diagnostico" class="crm-diag-body">Cargando diagnóstico…</p>
+                        <p id="m360-diag-desc" class="crm-diag-body">Cargando diagnóstico…</p>
                     </div>
                 </div>
 
-                <!-- Pestaña 2: Pedidos Recientes -->
+                <!-- Pestaña 2: Historial de Pedidos -->
                 <div id="tab-pedidos" class="crm-tab-content hidden">
-                    <div class="adm-card" style="box-shadow: none; border: 1px solid var(--adm-line);">
-                        <div class="adm-table-wrap">
-                            <table class="adm-table">
-                                <thead>
-                                    <tr>
-                                        <th>Pedido</th>
-                                        <th>Fecha</th>
-                                        <th>Estado</th>
-                                        <th>Pago</th>
-                                        <th class="num">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tbody-m360-pedidos">
-                                    <tr><td colspan="5" class="adm-empty">Sin pedidos registrados</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    <div class="adm-table-wrap">
+                        <table class="adm-table">
+                            <thead>
+                                <tr>
+                                    <th>Pedido #</th>
+                                    <th>Fecha</th>
+                                    <th>Total</th>
+                                    <th>Estado</th>
+                                    <th>Pago</th>
+                                    <th class="num">Detalle</th>
+                                </tr>
+                            </thead>
+                            <tbody id="m360-tbody-pedidos">
+                                <tr>
+                                    <td colspan="6" class="adm-empty">Sin pedidos registrados</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
                 <!-- Pestaña 3: Puntos & Cupones -->
                 <div id="tab-recompensas" class="crm-tab-content hidden">
-                    <div class="adm-grid-stats cols-2" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 16px;">
-                        <div class="adm-stat">
-                            <div class="adm-stat-top">
-                                <span class="adm-stat-label">Cupones de Descuento</span>
-                                <span class="adm-icon-chip blue">🏷</span>
-                            </div>
-                            <div class="adm-stat-value" style="font-size: 1.35rem; margin: 8px 0 2px;">
-                                <span id="m360-cupones-usados">0</span> <small style="font-size: 0.75rem; color: var(--adm-muted); font-weight: 600;">canjeados</small>
-                            </div>
-                            <p class="adm-stat-cap">Total ahorrado: <strong id="m360-cupones-ahorro" style="color: #059669;">S/ 0.00</strong></p>
-                        </div>
-                        <div class="adm-stat">
-                            <div class="adm-stat-top">
-                                <span class="adm-stat-label">Histórico de Lealtad</span>
-                                <span class="adm-icon-chip amber">★</span>
-                            </div>
-                            <div class="adm-stat-value" style="font-size: 1.35rem; margin: 8px 0 2px;">
-                                <span id="m360-puntos-historicos" style="color: #d97706;">0 pts</span>
-                            </div>
-                            <p class="adm-stat-cap">Puntos acumulados de por vida</p>
-                        </div>
-                    </div>
-
-                    <div class="adm-card" style="box-shadow: none; border: 1px solid var(--adm-line);">
-                        <div class="adm-card-head" style="padding: 12px 18px;">
-                            <span class="adm-stat-label">Últimos Movimientos del Ledger de Puntos</span>
-                        </div>
-                        <div class="adm-table-wrap" style="max-height: 240px; overflow-y: auto;">
-                            <table class="adm-table">
-                                <thead>
-                                    <tr>
-                                        <th>Fecha</th>
-                                        <th>Tipo</th>
-                                        <th>Detalle</th>
-                                        <th class="num">Puntos</th>
-                                        <th class="num">Saldo</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tbody-m360-puntos">
-                                    <tr><td colspan="5" class="adm-empty">Sin movimientos de puntos</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    <div class="adm-table-wrap">
+                        <table class="adm-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Descripción</th>
+                                    <th class="num">Puntos</th>
+                                    <th class="num">Saldo Resultante</th>
+                                </tr>
+                            </thead>
+                            <tbody id="m360-tbody-transacciones">
+                                <tr>
+                                    <td colspan="5" class="adm-empty">Sin movimientos de puntos</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
                 <!-- Pestaña 4: Notas Internas de Soporte -->
                 <div id="tab-notas" class="crm-tab-content hidden">
-                    <form id="form-crear-nota" class="crm-note-form">
-                        <label for="input-nota-texto" class="adm-label">
-                            Agregar Nota Interna de Soporte / Seguimiento
-                        </label>
-                        <textarea id="input-nota-texto" rows="3" required maxlength="2000" placeholder="Registra incidencias, preferencias del cliente, compromisos comerciales o acuerdos de soporte…" class="adm-textarea" style="margin-bottom: 12px;"></textarea>
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <span class="adm-sub">Visible para todo el equipo administrativo con fines de auditoría</span>
+                    <!-- Formulario de nueva nota -->
+                    <form id="form-nueva-nota" class="crm-note-form">
+                        <label class="adm-label" for="input-nueva-nota">Agregar nota sobre este cliente</label>
+                        <textarea id="input-nueva-nota" class="adm-textarea" rows="2" placeholder="Registra llamadas, incidentes de garantía o acuerdos especiales…" required></textarea>
+                        <div class="crm-note-form-foot">
                             <button type="submit" id="btn-guardar-nota" class="adm-btn adm-btn-primary adm-btn-sm">
-                                Guardar Nota
+                                Registrar Nota
                             </button>
                         </div>
                     </form>
 
-                    <div class="adm-card" style="box-shadow: none; border: 1px solid var(--adm-line); padding: 18px;">
-                        <div class="adm-card-title" style="font-size: 0.8rem; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--adm-muted);">
-                            Historial de Bitácora
-                        </div>
-                        <div id="timeline-notas" style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
-                            <p class="adm-empty">Sin notas registradas para este cliente</p>
-                        </div>
+                    <!-- Lista de notas existentes -->
+                    <div id="m360-lista-notas" class="crm-notes-timeline">
+                        <p class="adm-empty">No hay notas registradas para este cliente.</p>
                     </div>
                 </div>
 
@@ -294,10 +264,6 @@
         </div>
     </div>
 
-    <footer class="adm-footer">
-        <p>© 2026 ELECTRONIX — Módulo de Administración.</p>
-    </footer>
-
-    <script type="module" src="/assets/js/admin/crm-clientes.js?v=2"></script>
+    <script type="module" src="/assets/js/admin/crm-clientes.js?v=3"></script>
 </body>
 </html>

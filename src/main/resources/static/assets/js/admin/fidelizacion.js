@@ -2,6 +2,7 @@ import { api } from '/assets/js/api.js';
 import { auth } from '/assets/js/auth.js';
 import { renderAdminShell } from '/assets/js/ui/adminShell.js';
 import { showToast } from '/assets/js/ui/toast.js';
+import { swapSuave } from '/assets/js/ui/pager.js?v=2';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -115,8 +116,8 @@ async function guardarConfig(e) {
 
 async function consultarBilletera(usuarioId) {
     usuarioConsultadoId = usuarioId;
-    const wrap = $('resultado-billetera-wrap');
-    const hint = $('billetera-vacia-hint');
+    const wrap = $('fid-wallet-active');
+    const hint = $('fid-wallet-empty');
 
     try {
         const res = await api.get(`/api/admin/crm/puntos/usuarios/${usuarioId}`);
@@ -129,16 +130,16 @@ async function consultarBilletera(usuarioId) {
         hint.classList.add('hidden');
         wrap.classList.remove('hidden');
 
-        $('txt-billetera-usuario').textContent = `${b.usuarioNombre || 'Usuario'} (ID #${b.usuarioId})`;
-        if ($('txt-billetera-avatar')) {
-            $('txt-billetera-avatar').textContent = (b.usuarioNombre ? b.usuarioNombre.charAt(0) : 'U').toUpperCase();
+        $('fid-nombre-usuario').textContent = `${b.usuarioNombre || 'Usuario'} (ID #${b.usuarioId})`;
+        if ($('fid-avatar')) {
+            $('fid-avatar').textContent = (b.usuarioNombre ? b.usuarioNombre.charAt(0) : 'U').toUpperCase();
         }
-        $('txt-billetera-email').textContent = b.usuarioEmail || 'Sin email registrado';
-        $('txt-billetera-saldo').textContent = `${b.saldoPuntos} pts`;
+        $('fid-email-usuario').textContent = b.usuarioEmail || 'Sin email registrado';
+        $('fid-saldo-puntos').textContent = `${b.saldoPuntos} pts`;
         const valPen = Number(b.valorEstimadoPen ?? b.equivalentePen ?? 0).toFixed(2);
-        $('txt-billetera-valor').textContent = `S/ ${valPen}`;
+        $('fid-valor-pen').textContent = `S/ ${valPen}`;
 
-        const nivelBadge = $('txt-billetera-nivel');
+        const nivelBadge = $('fid-badge-nivel');
         if (nivelBadge) {
             const nivelCod = (b.nivelCodigo || 'BRONCE').toUpperCase();
             nivelBadge.textContent = b.nivelNombre || nivelCod;
@@ -230,42 +231,46 @@ async function cargarNiveles() {
         nivelesList = res.datos;
 
         if (nivelesList.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="adm-empty">No se encontraron niveles configurados.</td></tr>';
+            await swapSuave(tbody, () => {
+                tbody.innerHTML = '<tr><td colspan="6" class="adm-empty">No se encontraron niveles configurados.</td></tr>';
+            });
             return;
         }
 
-        tbody.innerHTML = nivelesList.map(n => {
-            const mult = Number(n.multiplicador || 1).toFixed(2);
-            const umbral = Number(n.umbralPenAnual || 0).toFixed(2);
-            const envioBadge = n.beneficioEnvio
-                ? '<span class="adm-badge b-ok">Sí (Gratis)</span>'
-                : '<span class="adm-badge b-off">No</span>';
+        await swapSuave(tbody, () => {
+            tbody.innerHTML = nivelesList.map(n => {
+                const mult = Number(n.multiplicador || 1).toFixed(2);
+                const umbral = Number(n.umbralPenAnual || 0).toFixed(2);
+                const envioBadge = n.beneficioEnvio
+                    ? '<span class="adm-badge b-ok">Sí (Gratis)</span>'
+                    : '<span class="adm-badge b-off">No</span>';
 
-            let nivelBadge = `<span class="badge-tier badge-tier--bronce">${esc(n.nombre)} (${esc(n.codigo)})</span>`;
-            if (n.codigo === 'ORO') {
-                nivelBadge = `<span class="badge-tier badge-tier--oro">${esc(n.nombre)} (${esc(n.codigo)})</span>`;
-            } else if (n.codigo === 'PLATA') {
-                nivelBadge = `<span class="badge-tier badge-tier--plata">${esc(n.nombre)} (${esc(n.codigo)})</span>`;
-            }
+                let nivelBadge = `<span class="badge-tier badge-tier--bronce">${esc(n.nombre)} (${esc(n.codigo)})</span>`;
+                if (n.codigo === 'ORO') {
+                    nivelBadge = `<span class="badge-tier badge-tier--oro">${esc(n.nombre)} (${esc(n.codigo)})</span>`;
+                } else if (n.codigo === 'PLATA') {
+                    nivelBadge = `<span class="badge-tier badge-tier--plata">${esc(n.nombre)} (${esc(n.codigo)})</span>`;
+                }
 
-            return `<tr>
-                <td><span class="adm-id">${n.orden}</span></td>
-                <td>${nivelBadge}</td>
-                <td><span class="adm-strong">S/ ${umbral}</span></td>
-                <td><span class="adm-strong" style="color: var(--adm-teal);">${mult}x</span></td>
-                <td>${envioBadge}</td>
-                <td class="num adm-celda-num">
-                    <button type="button" class="btn-editar-nivel adm-btn adm-btn-edit adm-btn-sm" data-codigo="${esc(n.codigo)}">
-                        Editar
-                    </button>
-                </td>
-            </tr>`;
-        }).join('');
+                return `<tr>
+                    <td><span class="adm-id">${n.orden}</span></td>
+                    <td>${nivelBadge}</td>
+                    <td><span class="adm-strong">S/ ${umbral}</span></td>
+                    <td><span class="adm-strong" style="color: var(--adm-teal);">${mult}x</span></td>
+                    <td class="center">${envioBadge}</td>
+                    <td class="num adm-celda-num">
+                        <button type="button" class="btn-editar-nivel adm-btn adm-btn-edit adm-btn-sm" data-codigo="${esc(n.codigo)}">
+                            Editar
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
 
-        tbody.querySelectorAll('.btn-editar-nivel').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const codigo = btn.dataset.codigo;
-                abrirModalNivel(codigo);
+            tbody.querySelectorAll('.btn-editar-nivel').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const codigo = btn.dataset.codigo;
+                    abrirModalNivel(codigo);
+                });
             });
         });
     } catch (e) {

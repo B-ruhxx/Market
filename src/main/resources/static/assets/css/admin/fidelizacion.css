@@ -7,9 +7,9 @@
 .fid-main-grid {
     display: grid;
     grid-template-columns: 1.05fr 0.95fr;
-    gap: 20px;
+    gap: 18px;
     align-items: start;
-    margin-bottom: 24px;
+    margin-bottom: 22px;
 }
 
 @media (max-width: 1100px) {
@@ -18,12 +18,17 @@
     }
 }
 
+.adm-table th.center,
+.adm-table td.center {
+    text-align: center;
+}
+
 /* Buscador de billetera de cliente */
 .fid-search-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
 }
 
 .fid-search-input {
@@ -33,11 +38,11 @@
 
 /* Ficha resumen de billetera del cliente */
 .fid-wallet-card {
-    background: #f8fafc;
+    background: var(--adm-bg);
     border: 1px solid var(--adm-line);
     border-radius: 12px;
     padding: 16px 18px;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -101,82 +106,114 @@
 }
 
 .fid-wallet-pen {
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: 800;
     color: var(--adm-ink);
     line-height: 1.1;
 }
 
-/* Caja de ajuste manual */
+.fid-wallet-name {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--adm-ink);
+    margin: 0;
+}
+
+.fid-wallet-email {
+    font-size: 0.75rem;
+    color: var(--adm-muted);
+}
+
+/* Estado vacío de billetera */
+.fid-wallet-empty {
+    padding: 36px 20px;
+    text-align: center;
+    background: var(--adm-bg);
+    border: 1px dashed var(--adm-line);
+    border-radius: 10px;
+    color: var(--adm-muted);
+    font-size: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.fid-empty-icon {
+    color: var(--adm-faint);
+}
+
+.fid-wallet-empty p {
+    margin: 0;
+    max-width: 280px;
+    line-height: 1.4;
+}
+
+/* Formulario de ajuste manual */
 .fid-adjust-box {
-    background: #ffffff;
+    background: var(--adm-bg);
     border: 1px solid var(--adm-line);
-    border-radius: 12px;
-    padding: 16px 18px;
-    margin-bottom: 18px;
-    box-shadow: 0 1px 3px rgba(27, 35, 64, 0.03);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
 }
 
 .fid-adjust-title {
-    font-size: 0.74rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--adm-ink);
-    margin-bottom: 12px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: var(--adm-ink);
+    margin-bottom: 12px;
 }
 
-/* Hint cuando no hay búsqueda */
-.fid-wallet-empty {
-    padding: 40px 20px;
-    text-align: center;
-    color: var(--adm-muted);
-    font-size: 0.8rem;
-    background: #f8fafc;
-    border: 1px dashed var(--adm-line);
-    border-radius: 12px;
+/* Ledger wrap */
+.fid-ledger-wrap {
+    background: var(--adm-card);
+    border: 1px solid var(--adm-line);
+    border-radius: 10px;
+    overflow: hidden;
 }
 
-.fid-wallet-empty svg {
-    margin: 0 auto 10px;
-    color: var(--adm-faint);
-    display: block;
-}
-
-/* Badges de tiers en tabla niveles */
-.badge-tier-lg {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.72rem;
-    font-weight: 900;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    border: 1px solid transparent;
+.fid-ledger-head {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--adm-line);
+    background: var(--adm-bg);
 }
 
 /* Modal editar nivel */
 .adm-modal--nivel {
-    max-width: 440px;
+    max-width: 480px !important;
 }
 
-/* Modo oscuro */
+/* Modo oscuro y mixto */
 html[data-theme="dark"] .fid-wallet-card,
-html[data-theme="dark"] .fid-wallet-empty {
-    background: #141414;
-    border-color: #282828;
+html[data-theme="dark"] .fid-wallet-empty,
+html[data-theme="mixed"] .fid-wallet-card,
+html[data-theme="mixed"] .fid-wallet-empty {
+    background: #191b1f;
+    border-color: #272a2f;
 }
 
-html[data-theme="dark"] .fid-adjust-box {
-    background: #1a1a1a;
-    border-color: #282828;
+html[data-theme="dark"] .fid-adjust-box,
+html[data-theme="mixed"] .fid-adjust-box {
+    background: #191b1f;
+    border-color: #272a2f;
 }
 
-html[data-theme="dark"] .fid-wallet-pen {
-    color: #f0f0f0;
+html[data-theme="dark"] .fid-ledger-wrap,
+html[data-theme="mixed"] .fid-ledger-wrap {
+    border-color: #272a2f;
+}
+
+html[data-theme="dark"] .fid-ledger-head,
+html[data-theme="mixed"] .fid-ledger-head {
+    background: #14161a;
+    border-color: #272a2f;
+}
+
+html[data-theme="dark"] .fid-wallet-pen,
+html[data-theme="mixed"] .fid-wallet-pen {
+    color: #f3f4f6;
 }

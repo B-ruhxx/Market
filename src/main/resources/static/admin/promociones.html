@@ -7,15 +7,15 @@
     <link rel="icon" type="image/svg+xml" href="/assets/img/logo.svg">
     <link rel="stylesheet" href="/assets/css/output.css">
     <script src="/assets/js/admin-theme.js"></script>
-    <link rel="stylesheet" href="/assets/css/admin.css?v=2">
-    <link rel="stylesheet" href="/assets/css/admin/promociones.css?v=2">
+    <link rel="stylesheet" href="/assets/css/admin.css?v=5">
+    <link rel="stylesheet" href="/assets/css/admin/promociones.css?v=3">
     <link rel="stylesheet" href="/assets/css/ui/ui-inline.css?v=2">
 </head>
 <body class="adm">
 
     <header id="main-navbar"></header>
 
-    <main class="adm-main">
+    <main class="adm-main adm-table-page">
 
         <!-- Encabezado de página -->
         <div class="adm-pagehead">
@@ -78,7 +78,7 @@
                             <th>Código</th>
                             <th>Tipo y Valor</th>
                             <th>Reglas y Restricciones</th>
-                            <th style="text-align: center;">Canjes</th>
+                            <th class="center">Canjes</th>
                             <th>Vigencia</th>
                             <th>Estado</th>
                             <th class="num">Acciones</th>
@@ -91,6 +91,8 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Paginador estándar con soporte responsivo -->
+            <div id="cupones-pager" class="adm-pager" hidden></div>
         </div>
 
     </main>
@@ -214,10 +216,6 @@
         </div>
     </div>
 
-    <footer class="adm-footer">
-        <p>© 2026 ELECTRONIX — Módulo de Administración.</p>
-    </footer>
-
-    <script type="module" src="/assets/js/admin/promociones.js?v=2"></script>
+    <script type="module" src="/assets/js/admin/promociones.js?v=3"></script>
 </body>
 </html>

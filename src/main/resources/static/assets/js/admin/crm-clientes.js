@@ -2,7 +2,7 @@ import { api } from '/assets/js/api.js';
 import { auth } from '/assets/js/auth.js';
 import { renderAdminShell } from '/assets/js/ui/adminShell.js';
 import { showToast } from '/assets/js/ui/toast.js';
-import { renderPager } from '/assets/js/ui/pager.js?v=2';
+import { renderPager, swapSuave } from '/assets/js/ui/pager.js?v=2';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -11,96 +11,147 @@ let clientesData = [];
 let listaFiltradaActual = [];
 let filtroSegmentoActual = '';
 let clienteActivoId = null;
-let paginaActual = 1;
-const TAMANO_PAGINA = 15;
+let paginaActual = 0;
+let TAMANO_PAGINA = 12;
+let temporizadorResize;
 
 renderAdminShell('crm-clientes');
 
 if (!auth.protegerRutaAdmin()) {
-    // Redirección por protección
+    // Redirige si no tiene rol admin
 } else if (!auth.tienePermiso('CRM_GESTIONAR')) {
-    showToast('No tienes permiso para acceder al módulo CRM 360°', 'error');
+    showToast('No tienes permiso para gestionar CRM Clientes', 'error');
     setTimeout(() => { window.location.href = '/admin/dashboard.html'; }, 1000);
 } else {
     iniciar();
 }
 
+function filasPorViewport() {
+    const tableWrap = document.querySelector('.adm-table-wrap');
+    const tbody = $('tbody-clientes');
+    if (!window.matchMedia('(min-width: 901px)').matches || !tableWrap || !tbody) return 12;
+    const fila = tbody.querySelector('tr');
+    const cabecera = tableWrap.querySelector('thead');
+    if (!fila || !cabecera) return TAMANO_PAGINA;
+    const altoDisponible = tableWrap.clientHeight - cabecera.getBoundingClientRect().height;
+    const altoFila = Math.max(1, fila.getBoundingClientRect().height);
+    return Math.max(1, Math.min(50, Math.floor(altoDisponible / altoFila)));
+}
+
+function ajustarFilasAlViewport() {
+    const siguienteTamano = filasPorViewport();
+    if (siguienteTamano === TAMANO_PAGINA) return;
+    const primerRegistro = paginaActual * TAMANO_PAGINA;
+    TAMANO_PAGINA = siguienteTamano;
+    paginaActual = Math.floor(primerRegistro / TAMANO_PAGINA);
+    renderizarTablaClientes(listaFiltradaActual);
+}
+
 async function iniciar() {
-    $('btn-refrescar-clientes')?.addEventListener('click', () => cargarClientes(filtroSegmentoActual));
+    $('btn-refrescar-clientes')?.addEventListener('click', () => cargarClientes());
     $('btn-exportar-csv')?.addEventListener('click', exportarCSV);
 
-    $('input-buscar-cliente')?.addEventListener('input', e => {
-        filtrarTablaLocal(e.target.value.trim().toLowerCase());
-    });
-
-    // Filtros por botón de segmento (Chips)
+    // Filtros por chips
     document.querySelectorAll('.btn-filtro-seg').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.btn-filtro-seg').forEach(b => b.classList.remove('is-active'));
             btn.classList.add('is-active');
-
             filtroSegmentoActual = btn.dataset.segmento || '';
-            cargarClientes(filtroSegmentoActual);
+            paginaActual = 0;
+            aplicarFiltros();
         });
     });
 
-    // Pestañas del Modal 360°
-    document.querySelectorAll('.crm-tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.crm-tab-btn').forEach(b => b.classList.remove('active'));
+    // Buscador con debounce
+    let debounceTimer;
+    $('input-buscar-cliente')?.addEventListener('input', e => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            paginaActual = 0;
+            aplicarFiltros();
+        }, 250);
+    });
+
+    // Eventos del modal 360°
+    $('btn-cerrar-modal-360')?.addEventListener('click', cerrarModal360);
+    $('modal-360')?.addEventListener('click', e => {
+        if (e.target === $('modal-360')) cerrarModal360();
+    });
+
+    // Pestañas del modal
+    document.querySelectorAll('.crm-tab-btn').forEach(tabBtn => {
+        tabBtn.addEventListener('click', () => {
+            document.querySelectorAll('.crm-tab-btn').forEach(b => b.classList.remove('active', 'is-active'));
             document.querySelectorAll('.crm-tab-content').forEach(c => c.classList.add('hidden'));
 
-            btn.classList.add('active');
-            const targetId = btn.dataset.tab;
-            $(targetId)?.classList.remove('hidden');
+            tabBtn.classList.add('active', 'is-active');
+            const targetId = tabBtn.dataset.tab;
+            const targetEl = $(targetId);
+            if (targetEl) targetEl.classList.remove('hidden');
         });
     });
 
-    $('btn-cerrar-modal-360')?.addEventListener('click', cerrarModal360);
-    $('form-crear-nota')?.addEventListener('submit', guardarNota);
+    // Formulario de nota
+    $('form-nueva-nota')?.addEventListener('submit', registrarNota);
 
-    // Cargar si la URL trae ?id=X
-    const params = new URLSearchParams(window.location.search);
-    const idParam = params.get('id');
+    window.addEventListener('resize', () => {
+        clearTimeout(temporizadorResize);
+        temporizadorResize = setTimeout(ajustarFilasAlViewport, 150);
+    });
 
-    await cargarClientes('');
+    await cargarClientes();
+}
 
-    if (idParam) {
-        const idNum = parseInt(idParam, 10);
-        if (idNum > 0) abrirFicha360(idNum);
+async function cargarClientes() {
+    const tbody = $('tbody-clientes');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="8" class="adm-empty">Cargando base de clientes…</td></tr>';
+    }
+
+    try {
+        const res = await api.get('/api/admin/crm/clientes/360');
+        if (!res.exito || !Array.isArray(res.datos)) {
+            throw new Error(res.mensaje || 'Error al obtener clientes');
+        }
+        clientesData = res.datos;
+        aplicarFiltros();
+    } catch (err) {
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="8" class="adm-err">Error al cargar clientes: ${esc(err.message)}</td></tr>`;
+        }
+        showToast('Error al cargar clientes CRM: ' + err.message, 'error');
     }
 }
 
-async function cargarClientes(segmento) {
-    const tbody = $('tbody-clientes');
-    if (!tbody) return;
+function aplicarFiltros() {
+    const q = ($('input-buscar-cliente')?.value || '').trim().toLowerCase();
 
-    try {
-        const url = segmento ? `/api/admin/crm/clientes?segmento=${encodeURIComponent(segmento)}` : '/api/admin/crm/clientes';
-        const res = await api.get(url);
-        if (!res.exito || !Array.isArray(res.datos)) return;
+    let lista = clientesData.filter(c => {
+        if (filtroSegmentoActual && c.segmento !== filtroSegmentoActual) {
+            return false;
+        }
+        if (q) {
+            const nom = (c.nombre || '').toLowerCase();
+            const em = (c.email || '').toLowerCase();
+            const doc = (c.numeroDocumento || '').toLowerCase();
+            return nom.includes(q) || em.includes(q) || doc.includes(q);
+        }
+        return true;
+    });
 
-        paginaActual = 1;
-        clientesData = res.datos;
-        renderizarTablaClientes(clientesData);
-    } catch (e) {
-        showToast('Error al cargar clientes: ' + e.message, 'error');
-    }
+    renderizarTablaClientes(lista);
 }
 
 function obtenerBadgeNivel(nivel) {
-    const n = String(nivel || 'Bronce').trim();
-    if (n.toLowerCase() === 'oro') {
-        return '<span class="badge-tier badge-tier--oro">Oro</span>';
-    } else if (n.toLowerCase() === 'plata') {
-        return '<span class="badge-tier badge-tier--plata">Plata</span>';
-    }
-    return '<span class="badge-tier badge-tier--bronce">Bronce</span>';
+    const n = (nivel || 'BRONCE').toUpperCase();
+    if (n === 'ORO') return '<span class="badge-tier badge-tier--oro">👑 ORO</span>';
+    if (n === 'PLATA') return '<span class="badge-tier badge-tier--plata">🥈 PLATA</span>';
+    return '<span class="badge-tier badge-tier--bronce">🥉 BRONCE</span>';
 }
 
 function obtenerBadgeSegmento(segmento, label) {
-    const s = String(segmento || '').toUpperCase();
-    const txt = esc(label || segmento);
+    const s = (segmento || '').toUpperCase();
+    const txt = esc(label || s || 'INACTIVO');
     if (s === 'VIP') {
         return `<span class="adm-badge b-vip">👑 ${txt}</span>`;
     } else if (s === 'ACTIVO') {
@@ -115,72 +166,73 @@ function obtenerBadgeSegmento(segmento, label) {
     return `<span class="adm-badge b-off">${txt}</span>`;
 }
 
-function renderizarTablaClientes(lista) {
+async function renderizarTablaClientes(lista) {
     listaFiltradaActual = lista;
     const tbody = $('tbody-clientes');
     const pager = $('crm-pager');
     if (!tbody) return;
 
     if (!lista || lista.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="adm-empty">No se encontraron clientes para este criterio.</td></tr>';
-        if (pager) pager.innerHTML = '';
+        await swapSuave(tbody, () => {
+            tbody.innerHTML = '<tr><td colspan="8" class="adm-empty">No se encontraron clientes para este criterio.</td></tr>';
+        });
+        if (pager) pager.setAttribute('hidden', '');
         return;
     }
 
     const totalPaginas = Math.ceil(lista.length / TAMANO_PAGINA);
-    if (paginaActual > totalPaginas) paginaActual = totalPaginas;
-    if (paginaActual < 1) paginaActual = 1;
+    if (paginaActual >= totalPaginas) paginaActual = Math.max(0, totalPaginas - 1);
+    if (paginaActual < 0) paginaActual = 0;
 
-    const inicio = (paginaActual - 1) * TAMANO_PAGINA;
+    const inicio = paginaActual * TAMANO_PAGINA;
     const fin = inicio + TAMANO_PAGINA;
     const paginaItems = lista.slice(inicio, fin);
 
-    tbody.innerHTML = paginaItems.map(c => {
-        const ltv = Number(c.ltvPen || 0).toFixed(2);
-        const dias = c.diasDesdeUltimaCompra != null ? `${c.diasDesdeUltimaCompra} d` : 'Nunca';
-        const fechaUltima = c.fechaUltimaCompra
-            ? new Date(c.fechaUltimaCompra).toLocaleDateString('es-PE', { day:'2-digit', month:'short', year:'numeric' })
-            : '—';
+    await swapSuave(tbody, () => {
+        tbody.innerHTML = paginaItems.map(c => {
+            const ltv = Number(c.ltvPen || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const dias = c.diasDesdeUltimaCompra !== null ? `${c.diasDesdeUltimaCompra}d` : '—';
+            const fechaUltima = c.fechaUltimaCompra ? new Date(c.fechaUltimaCompra).toLocaleDateString('es-PE', { day:'2-digit', month:'short' }) : 'Sin compras';
+            const initial = (c.nombre || c.email || 'U').charAt(0).toUpperCase();
 
-        const initial = (c.nombre || c.email || 'U').charAt(0).toUpperCase();
-
-        return `<tr>
-            <td>
-                <div class="adm-prod">
-                    <span class="adm-avatar">${esc(initial)}</span>
-                    <div>
-                        <div class="adm-strong">${esc(c.nombre)}</div>
-                        <div class="adm-sub">${esc(c.email)}</div>
+            return `<tr>
+                <td>
+                    <div class="adm-prod">
+                        <span class="adm-avatar">${esc(initial)}</span>
+                        <div>
+                            <div class="adm-strong">${esc(c.nombre)}</div>
+                            <div class="adm-sub">${esc(c.email)}</div>
+                        </div>
                     </div>
-                </div>
-            </td>
-            <td>${obtenerBadgeNivel(c.nivel)}</td>
-            <td>${obtenerBadgeSegmento(c.segmento, c.segmentoLabel)}</td>
-            <td class="num">
-                <span class="adm-strong adm-total" style="font-size: 0.88rem;">S/ ${ltv}</span>
-            </td>
-            <td style="text-align: center;">
-                <span class="adm-strong">${c.totalPedidos || 0}</span>
-            </td>
-            <td style="text-align: center;">
-                <span class="adm-strong">${dias}</span>
-                <div class="adm-sub">${fechaUltima}</div>
-            </td>
-            <td class="num">
-                <span class="crm-pts-cell">${c.saldoPuntos || 0} <small>pts</small></span>
-            </td>
-            <td class="num adm-celda-num">
-                <button type="button" class="btn-ver-360 adm-btn adm-btn-edit adm-btn-sm" data-id="${c.usuarioId}">
-                    Ver 360° →
-                </button>
-            </td>
-        </tr>`;
-    }).join('');
+                </td>
+                <td>${obtenerBadgeNivel(c.nivel)}</td>
+                <td>${obtenerBadgeSegmento(c.segmento, c.segmentoLabel)}</td>
+                <td class="num">
+                    <span class="adm-strong adm-total" style="font-size: 0.88rem;">S/ ${ltv}</span>
+                </td>
+                <td class="center">
+                    <span class="adm-strong">${c.totalPedidos || 0}</span>
+                </td>
+                <td class="center">
+                    <span class="adm-strong">${dias}</span>
+                    <div class="adm-sub">${fechaUltima}</div>
+                </td>
+                <td class="num">
+                    <span class="crm-pts-cell">${c.saldoPuntos || 0} <small>pts</small></span>
+                </td>
+                <td class="num adm-celda-num">
+                    <button type="button" class="btn-ver-360 adm-btn adm-btn-edit adm-btn-sm" data-id="${c.usuarioId}">
+                        Ver 360° →
+                    </button>
+                </td>
+            </tr>`;
+        }).join('');
 
-    tbody.querySelectorAll('.btn-ver-360').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const id = parseInt(btn.dataset.id, 10);
-            abrirFicha360(id);
+        tbody.querySelectorAll('.btn-ver-360').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = parseInt(btn.dataset.id, 10);
+                abrirFicha360(id);
+            });
         });
     });
 
@@ -196,239 +248,206 @@ function renderizarTablaClientes(lista) {
     }
 }
 
-function filtrarTablaLocal(query) {
-    paginaActual = 1;
-    if (!query) {
-        renderizarTablaClientes(clientesData);
-        return;
-    }
-    const filtrados = clientesData.filter(c =>
-        (c.nombre && c.nombre.toLowerCase().includes(query)) ||
-        (c.email && c.email.toLowerCase().includes(query))
-    );
-    renderizarTablaClientes(filtrados);
-}
-
 async function abrirFicha360(usuarioId) {
     clienteActivoId = usuarioId;
+    const modal = $('modal-360');
+    if (!modal) return;
+
+    modal.classList.remove('hidden');
+
+    // Resetear a pestaña inicial
+    const primerTab = document.querySelector('.crm-tab-btn[data-tab="tab-resumen"]');
+    if (primerTab) primerTab.click();
+
+    // Resetear notas input
+    $('input-nueva-nota').value = '';
 
     try {
-        const res = await api.get(`/api/admin/crm/clientes/${usuarioId}/360`);
+        const res = await api.get(`/api/admin/crm/clientes/360/${usuarioId}`);
         if (!res.exito || !res.datos) {
-            showToast('No fue posible cargar la ficha 360°', 'error');
-            return;
+            throw new Error(res.mensaje || 'Error al obtener ficha 360°');
         }
-
-        const d = res.datos;
-
-        // Header info
-        $('m360-nombre').textContent = d.nombre || 'Cliente #' + d.usuarioId;
-        $('m360-avatar').textContent = (d.nombre ? d.nombre.charAt(0) : 'U').toUpperCase();
-        $('m360-meta').textContent = `${d.email || ''} ${d.numeroDocumento ? '· ' + (d.tipoDocumento || 'DOC') + ' ' + d.numeroDocumento : ''} ${d.telefono ? '· Tel: ' + d.telefono : ''}`;
-
-        // Badges
-        const badgeNivel = $('m360-badge-nivel');
-        const nivelStr = String(d.nivelActual || 'Bronce').trim();
-        badgeNivel.textContent = nivelStr.toUpperCase();
-        if (nivelStr.toLowerCase() === 'oro') {
-            badgeNivel.className = 'badge-tier badge-tier--oro';
-        } else if (nivelStr.toLowerCase() === 'plata') {
-            badgeNivel.className = 'badge-tier badge-tier--plata';
-        } else {
-            badgeNivel.className = 'badge-tier badge-tier--bronce';
-        }
-
-        const badgeSeg = $('m360-badge-segmento');
-        const seg = String(d.segmento || '').toUpperCase();
-        badgeSeg.textContent = d.segmentoLabel || d.segmento || 'ACTIVO';
-        if (seg === 'VIP') {
-            badgeSeg.className = 'adm-badge b-vip';
-        } else if (seg === 'ACTIVO') {
-            badgeSeg.className = 'adm-badge b-ok';
-        } else if (seg === 'EN_RIESGO') {
-            badgeSeg.className = 'adm-badge b-pendiente';
-        } else if (seg === 'PROSPECTO') {
-            badgeSeg.className = 'adm-badge b-proceso';
-        } else {
-            badgeSeg.className = 'adm-badge b-off';
-        }
-
-        $('m360-badge-num-pedidos').textContent = d.totalPedidos || 0;
-        $('m360-badge-num-notas').textContent = d.notas ? d.notas.length : 0;
-
-        // Pestaña Resumen RFM
-        $('rfm-ltv').textContent = `S/ ${Number(d.ltvPen || 0).toFixed(2)}`;
-        $('rfm-ticket').textContent = `S/ ${Number(d.ticketPromedioPen || 0).toFixed(2)}`;
-        $('rfm-recencia').textContent = d.diasDesdeUltimaCompra != null ? `${d.diasDesdeUltimaCompra} días` : 'Sin compras';
-        $('rfm-saldo-puntos').textContent = `${d.saldoPuntos || 0} pts`;
-        $('rfm-valor-puntos').textContent = `≈ S/ ${Number(d.valorEstimadoPuntosPen || 0).toFixed(2)}`;
-
-        let diag = '';
-        if (d.segmento === 'VIP') diag = 'Cliente de alto valor comercial. Se sugiere trato preferencial y atención prioritaria con beneficios exclusivos.';
-        else if (d.segmento === 'ACTIVO') diag = 'Comprador habitual con actividad reciente en los últimos 30 días. Mantener fidelización constante.';
-        else if (d.segmento === 'EN_RIESGO') diag = 'Cliente histórico con 2 o más compras pero sin pedidos en 31-90 días. Se recomienda enviar promoción o cupón de reactivación.';
-        else if (d.segmento === 'PROSPECTO') diag = 'Usuario registrado que aún no concreta su primera compra. Ideal para cupón promocional de bienvenida.';
-        else diag = 'Cliente inactivo por más de 90 días. Requiere campaña de reenganche comercial.';
-        $('rfm-diagnostico').textContent = diag;
-
-        // Pestaña Pedidos
-        const tbodyPedidos = $('tbody-m360-pedidos');
-        if (d.ultimosPedidos && d.ultimosPedidos.length > 0) {
-            tbodyPedidos.innerHTML = d.ultimosPedidos.map(p => {
-                const fecha = p.fecha ? new Date(p.fecha).toLocaleDateString('es-PE', { day:'2-digit', month:'short', year:'numeric' }) : '—';
-                const total = Number(p.total || 0).toFixed(2);
-                let badgeEst = '<span class="adm-badge b-ok">Entregado</span>';
-                if (p.estado === 'PENDIENTE') badgeEst = '<span class="adm-badge b-pendiente">Pendiente</span>';
-                else if (p.estado === 'EN_PROCESO') badgeEst = '<span class="adm-badge b-proceso">En Proceso</span>';
-                else if (p.estado === 'ENVIADO') badgeEst = '<span class="adm-badge b-proceso">Enviado</span>';
-                else if (p.estado === 'CANCELADO') badgeEst = '<span class="adm-badge b-cancelado">Cancelado</span>';
-
-                return `<tr>
-                    <td><span class="adm-id">#${p.id}</span></td>
-                    <td class="adm-sub">${fecha}</td>
-                    <td>${badgeEst}</td>
-                    <td><span class="adm-sub">${esc(p.estadoPago || 'PENDIENTE')}</span></td>
-                    <td class="num"><strong class="adm-total">S/ ${total}</strong></td>
-                </tr>`;
-            }).join('');
-        } else {
-            tbodyPedidos.innerHTML = '<tr><td colspan="5" class="adm-empty">Sin pedidos registrados para este cliente.</td></tr>';
-        }
-
-        // Pestaña Recompensas
-        $('m360-cupones-usados').textContent = d.cuponesUsados || 0;
-        $('m360-cupones-ahorro').textContent = `S/ ${Number(d.totalDescontadoCuponesPen || 0).toFixed(2)}`;
-        $('m360-puntos-historicos').textContent = `${d.puntosHistoricos || 0} pts`;
-
-        const tbodyPuntos = $('tbody-m360-puntos');
-        if (d.ultimasTransacciones && d.ultimasTransacciones.length > 0) {
-            tbodyPuntos.innerHTML = d.ultimasTransacciones.map(t => {
-                const esPos = t.puntos > 0;
-                const ptsCls = esPos ? 'color: #059669; font-weight: 800;' : 'color: #d97706; font-weight: 800;';
-                const fecha = t.fecha ? new Date(t.fecha).toLocaleDateString('es-PE', { day:'2-digit', month:'short' }) : '—';
-                return `<tr>
-                    <td class="adm-sub">${fecha}</td>
-                    <td><span class="adm-id" style="font-size: 0.72rem;">${esc(t.tipo)}</span></td>
-                    <td><span class="adm-strong">${esc(t.descripcion || '—')}</span></td>
-                    <td class="num" style="${ptsCls}">${esPos ? '+' : ''}${t.puntos} pts</td>
-                    <td class="num"><strong class="adm-strong">${t.saldoResultante} pts</strong></td>
-                </tr>`;
-            }).join('');
-        } else {
-            tbodyPuntos.innerHTML = '<tr><td colspan="5" class="adm-empty">Sin movimientos de puntos registrados.</td></tr>';
-        }
-
-        // Pestaña Notas
-        renderizarNotas(d.notas || []);
-
-        // Abrir modal
-        $('modal-360')?.classList.remove('hidden');
-    } catch (e) {
-        showToast('Error al abrir ficha 360°: ' + e.message, 'error');
+        pintarFicha360(res.datos);
+    } catch (err) {
+        showToast('Error al abrir cliente: ' + err.message, 'error');
+        cerrarModal360();
     }
 }
 
-function renderizarNotas(notas) {
-    const timeline = $('timeline-notas');
-    if (!timeline) return;
+function pintarFicha360(c) {
+    const initial = (c.nombre || c.email || 'U').charAt(0).toUpperCase();
+    $('m360-avatar').textContent = initial;
+    $('m360-nombre').textContent = c.nombre || 'Sin nombre';
 
-    if (notas.length === 0) {
-        timeline.innerHTML = '<p class="adm-empty">Sin notas registradas para este cliente.</p>';
+    const nivelBadge = $('m360-badge-nivel');
+    const n = (c.nivel || 'BRONCE').toUpperCase();
+    nivelBadge.className = `badge-tier badge-tier--${n.toLowerCase()}`;
+    nivelBadge.textContent = n;
+
+    const segBadge = $('m360-badge-segmento');
+    segBadge.outerHTML = `<span id="m360-badge-segmento">${obtenerBadgeSegmento(c.segmento, c.segmentoLabel)}</span>`;
+
+    const fechaReg = c.fechaRegistro ? new Date(c.fechaRegistro).toLocaleDateString('es-PE', { year:'numeric', month:'short' }) : 'Reciente';
+    $('m360-meta').textContent = `${c.email} · DNI/Doc: ${c.numeroDocumento || 'No registrado'} · Miembro desde ${fechaReg}`;
+
+    // KPI Cards
+    const ltv = Number(c.ltvPen || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    $('m360-ltv').textContent = `S/ ${ltv}`;
+    const ticket = Number(c.ticketPromedioPen || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    $('m360-ticket').textContent = `S/ ${ticket}`;
+    $('m360-recencia').textContent = c.diasDesdeUltimaCompra !== null ? `${c.diasDesdeUltimaCompra} d` : '—';
+    $('m360-puntos').textContent = c.saldoPuntos || 0;
+    const puntosPen = Number(c.puntosEquivalentePen || 0).toFixed(2);
+    $('m360-puntos-pen').textContent = `≈ S/ ${puntosPen} en saldo`;
+
+    // Diagnóstico
+    $('m360-diag-desc').textContent = c.diagnosticoRfm || 'Cliente con comportamiento estándar de compra.';
+    const diagBadge = $('m360-diag-badge');
+    if (diagBadge) {
+        diagBadge.outerHTML = `<span id="m360-diag-badge">${obtenerBadgeSegmento(c.segmento, c.segmentoLabel)}</span>`;
+    }
+
+    // Pedidos
+    const pedidos = c.ultimosPedidos || [];
+    $('m360-badge-num-pedidos').textContent = pedidos.length;
+    const tbodyPed = $('m360-tbody-pedidos');
+    if (tbodyPed) {
+        if (pedidos.length === 0) {
+            tbodyPed.innerHTML = '<tr><td colspan="6" class="adm-empty">Sin pedidos registrados</td></tr>';
+        } else {
+            tbodyPed.innerHTML = pedidos.map(p => {
+                const total = Number(p.total || 0).toFixed(2);
+                const fecha = p.fecha ? new Date(p.fecha).toLocaleDateString('es-PE', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+                const estadoClass = p.estado === 'ENTREGADO' ? 'b-ok' : (p.estado === 'CANCELADO' ? 'b-cancelado' : 'b-pendiente');
+                const pagoClass = p.estadoPago === 'APROBADO' ? 'b-ok' : (p.estadoPago === 'RECHAZADO' ? 'b-cancelado' : 'b-pendiente');
+                return `<tr>
+                    <td class="adm-strong">#${p.id}</td>
+                    <td>${fecha}</td>
+                    <td class="adm-strong">S/ ${total}</td>
+                    <td><span class="adm-badge ${estadoClass}">${esc(p.estado)}</span></td>
+                    <td><span class="adm-badge ${pagoClass}">${esc(p.estadoPago)}</span></td>
+                    <td class="num">
+                        <a href="/admin/pedidos.html" class="adm-link">Ver orden →</a>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+    }
+
+    // Transacciones de puntos
+    const txs = c.transaccionesPuntos || [];
+    const tbodyTxs = $('m360-tbody-transacciones');
+    if (tbodyTxs) {
+        if (txs.length === 0) {
+            tbodyTxs.innerHTML = '<tr><td colspan="5" class="adm-empty">Sin movimientos de puntos</td></tr>';
+        } else {
+            tbodyTxs.innerHTML = txs.map(t => {
+                const esPos = t.puntos > 0;
+                const ptsClass = esPos ? 'style="color:#059669; font-weight:800;"' : 'style="color:#d97706; font-weight:800;"';
+                const ptsSign = esPos ? `+${t.puntos}` : `${t.puntos}`;
+                const fecha = t.fecha ? new Date(t.fecha).toLocaleDateString('es-PE', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
+                return `<tr>
+                    <td>${fecha}</td>
+                    <td><span class="adm-badge b-off">${esc(t.tipo)}</span></td>
+                    <td>${esc(t.descripcion || '-')}</td>
+                    <td class="num" ${ptsClass}>${ptsSign} pts</td>
+                    <td class="num adm-strong">${t.saldoResultante} pts</td>
+                </tr>`;
+            }).join('');
+        }
+    }
+
+    // Notas de soporte
+    const notas = c.notas || [];
+    $('m360-badge-num-notas').textContent = notas.length;
+    pintarListaNotas(notas);
+}
+
+function pintarListaNotas(notas) {
+    const cont = $('m360-lista-notas');
+    if (!cont) return;
+
+    if (!notas || notas.length === 0) {
+        cont.innerHTML = '<p class="adm-empty">No hay notas registradas para este cliente.</p>';
         return;
     }
 
-    timeline.innerHTML = notas.map(n => {
-        const fecha = n.fecha ? new Date(n.fecha).toLocaleString('es-PE', { dateStyle:'short', timeStyle:'short' }) : '—';
+    cont.innerHTML = notas.map(n => {
+        const fecha = n.fechaCreacion ? new Date(n.fechaCreacion).toLocaleString('es-PE', { dateStyle:'medium', timeStyle:'short' }) : '—';
         return `<div class="crm-note-card">
-            <div class="crm-note-top">
-                <span class="crm-note-author">
-                    <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                    ${esc(n.adminNombre || 'Administrador')}
-                </span>
-                <span class="crm-note-date">${fecha}</span>
+            <div class="crm-note-meta">
+                <span class="crm-note-author">${esc(n.autorNombre || 'Staff')}</span>
+                <span>${fecha}</span>
             </div>
-            <p class="crm-note-text">${esc(n.nota)}</p>
+            <p class="crm-note-text">${esc(n.contenido)}</p>
         </div>`;
     }).join('');
 }
 
-async function guardarNota(e) {
+async function registrarNota(e) {
     e.preventDefault();
     if (!clienteActivoId) return;
 
-    const targetId = clienteActivoId;
-    const textarea = $('input-nota-texto');
-    const notaTexto = textarea?.value?.trim();
-    if (!notaTexto) {
-        showToast('Escribe el contenido de la nota', 'warning');
-        return;
-    }
+    const input = $('input-nueva-nota');
+    const contenido = (input.value || '').trim();
+    if (!contenido) return;
 
     const btn = $('btn-guardar-nota');
     btn.disabled = true;
 
     try {
-        const res = await api.post(`/api/admin/crm/clientes/${targetId}/notas`, { nota: notaTexto });
-        if (res.exito) {
-            showToast('Nota registrada correctamente', 'success');
-            textarea.value = '';
-            if (clienteActivoId === targetId) {
-                const resNotas = await api.get(`/api/admin/crm/clientes/${targetId}/notas`);
-                if (resNotas.exito && Array.isArray(resNotas.datos) && clienteActivoId === targetId) {
-                    renderizarNotas(resNotas.datos);
-                    $('m360-badge-num-notas').textContent = resNotas.datos.length;
-                }
-            }
+        const res = await api.post(`/api/admin/crm/clientes/360/${clienteActivoId}/notas`, { contenido });
+        if (!res.exito || !res.datos) {
+            throw new Error(res.mensaje || 'Error al registrar nota');
         }
-    } catch (e) {
-        showToast('Error al registrar nota: ' + e.message, 'error');
+        input.value = '';
+        showToast('Nota registrada correctamente', 'success');
+
+        // Recargar ficha activa
+        const recarga = await api.get(`/api/admin/crm/clientes/360/${clienteActivoId}`);
+        if (recarga.exito && recarga.datos) {
+            pintarFicha360(recarga.datos);
+        }
+    } catch (err) {
+        showToast('Error al registrar nota: ' + err.message, 'error');
     } finally {
         btn.disabled = false;
     }
 }
 
 function cerrarModal360() {
-    $('modal-360')?.classList.add('hidden');
+    const modal = $('modal-360');
+    if (modal) modal.classList.add('hidden');
     clienteActivoId = null;
-}
-
-function sanitizarCeldaCsv(v) {
-    let str = String(v ?? '');
-    if (/^[=+\-@\t\r]/.test(str)) {
-        str = "'" + str;
-    }
-    return `"${str.replace(/"/g, '""')}"`;
 }
 
 function exportarCSV() {
     if (!clientesData || clientesData.length === 0) {
-        showToast('No hay datos de clientes para exportar', 'warning');
+        showToast('No hay datos para exportar', 'warning');
         return;
     }
 
-    const encabezados = ['ID', 'Nombre', 'Email', 'Nivel VIP', 'Segmento RFM', 'LTV (S/)', 'Total Pedidos', 'Dias sin Compra', 'Puntos Disponibles', 'Ultima Compra'];
-    const filas = clientesData.map(c => [
+    const headers = ['ID', 'Nombre', 'Email', 'Documento', 'Nivel', 'Segmento', 'LTV_PEN', 'Total_Pedidos', 'Dias_Ultima_Compra', 'Saldo_Puntos'];
+    const rows = clientesData.map(c => [
         c.usuarioId,
-        sanitizarCeldaCsv(c.nombre),
-        sanitizarCeldaCsv(c.email),
-        sanitizarCeldaCsv(c.nivel || 'Bronce'),
-        sanitizarCeldaCsv(c.segmentoLabel || c.segmento),
+        `"${(c.nombre || '').replace(/"/g, '""')}"`,
+        `"${(c.email || '').replace(/"/g, '""')}"`,
+        `"${(c.numeroDocumento || '').replace(/"/g, '""')}"`,
+        c.nivel || 'BRONCE',
+        c.segmento || 'INACTIVO',
         Number(c.ltvPen || 0).toFixed(2),
         c.totalPedidos || 0,
-        c.diasDesdeUltimaCompra != null ? c.diasDesdeUltimaCompra : '',
-        c.saldoPuntos || 0,
-        sanitizarCeldaCsv(c.fechaUltimaCompra ? c.fechaUltimaCompra.substring(0, 10) : '')
+        c.diasDesdeUltimaCompra !== null ? c.diasDesdeUltimaCompra : '',
+        c.saldoPuntos || 0
     ]);
 
-    const csvContent = '\uFEFF' + [encabezados.join(','), ...filas.map(f => f.join(','))].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `crm_clientes_360_${filtroSegmentoActual || 'todos'}_${new Date().toISOString().substring(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('Archivo CSV generado y descargado exitosamente', 'success');
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `clientes_crm_electronix_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Exportación CSV completada', 'success');
 }
