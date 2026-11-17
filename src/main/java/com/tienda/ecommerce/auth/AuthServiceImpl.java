@@ -17,12 +17,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthServiceImpl implements AuthService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AuthServiceImpl.class);
+
     private final UsuarioRepository usuarioRepository;
     private final CarritoService carritoService;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final com.tienda.ecommerce.configuracion.AccesoService acceso;
     private final LoginAttemptService loginAttemptService;
+    private final com.tienda.ecommerce.crm.CrmService crmService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public AuthServiceImpl(
@@ -31,7 +34,8 @@ public class AuthServiceImpl implements AuthService {
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
             com.tienda.ecommerce.configuracion.AccesoService acceso,
-            LoginAttemptService loginAttemptService
+            LoginAttemptService loginAttemptService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) com.tienda.ecommerce.crm.CrmService crmService
     ) {
         this.usuarioRepository = usuarioRepository;
         this.carritoService = carritoService;
@@ -39,6 +43,7 @@ public class AuthServiceImpl implements AuthService {
         this.jwtService = jwtService;
         this.acceso = acceso;
         this.loginAttemptService = loginAttemptService != null ? loginAttemptService : new LoginAttemptService();
+        this.crmService = crmService;
     }
 
     public AuthServiceImpl(
@@ -48,7 +53,7 @@ public class AuthServiceImpl implements AuthService {
             JwtService jwtService,
             com.tienda.ecommerce.configuracion.AccesoService acceso
     ) {
-        this(usuarioRepository, carritoService, passwordEncoder, jwtService, acceso, new LoginAttemptService());
+        this(usuarioRepository, carritoService, passwordEncoder, jwtService, acceso, new LoginAttemptService(), null);
     }
 
     @Override
@@ -97,6 +102,15 @@ public class AuthServiceImpl implements AuthService {
 
         // Inicializar carrito para el nuevo usuario
         carritoService.obtenerOCrearCarritoEntity(guardado.getId());
+
+        // Inicializar billetera con bono de bienvenida CRM
+        if (crmService != null) {
+            try {
+                crmService.inicializarBilleteraBienvenida(guardado);
+            } catch (Exception e) {
+                log.error("Fallo al inicializar billetera de bienvenida para el usuario #{}: {}", guardado.getId(), e.getMessage(), e);
+            }
+        }
 
         String token = jwtService.generarToken(guardado);
         AuthResponse respuesta = new AuthResponse(token, guardado.getId(), guardado.getNombre(), guardado.getEmail(), guardado.getRol());

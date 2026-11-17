@@ -50,6 +50,7 @@ class PedidoServiceTest {
     @Mock private CotizacionService cotizaciones;
     @Mock private com.tienda.ecommerce.pago.FormularioPagoService formularios;
     @Mock private jakarta.persistence.EntityManager entityManager;
+    @Mock private com.tienda.ecommerce.crm.CrmService crmService;
 
     @InjectMocks
     private PedidoServiceImpl pedidoService;
@@ -197,5 +198,197 @@ class PedidoServiceTest {
         PedidoResponse response = pedidoService.verificarPago(53L, com.tienda.ecommerce.pago.EstadoPago.APROBADO);
 
         assertEquals(com.tienda.ecommerce.pago.EstadoPago.APROBADO, response.getEstadoPago());
+    }
+
+    @Test
+    @DisplayName("Debe dividir descuento PEN por tasaPen para pedidos en USD y desacoplar guardado de pedido y registro de cupón (SEC-CRM-01, SEC-CRM-02)")
+    void crearDesdeCarrito_conCuponUsd_dividePorTasaYDesacoplaRegistro() {
+        var metodoUsd = new com.tienda.ecommerce.pago.MetodoPagoConfig();
+        metodoUsd.setCodigo("TARJETA_USD");
+        metodoUsd.setNombre("Tarjeta USD");
+        metodoUsd.setProcesamiento("SIMULADO");
+        metodoUsd.setPrefijoTransaccion("TX-");
+        metodoUsd.setMonedas(java.util.Set.of("USD"));
+        when(metodoPagoConfigRepository.findById("TARJETA_USD")).thenReturn(Optional.of(metodoUsd));
+
+        var linea = new CotizacionService.Linea(5L, "Mouse", 2, new BigDecimal("50.00"), "USD", BigDecimal.ONE,
+                new BigDecimal("50.00"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("50.00"), new BigDecimal("100.00"));
+        // 100 USD cotizados, tasaPen 3.80 -> totalBasePen = 380.00 PEN
+        var cotizacionUsd = new CotizacionService.Datos(
+                "00000000-0000-0000-0000-000000000002", 1L, "huella", "USD",
+                new BigDecimal("100.00"), new BigDecimal("3.8000"), new BigDecimal("380.00"), java.util.List.of(linea)
+        );
+        when(cotizaciones.verificar(any(), any(), any())).thenReturn(cotizacionUsd);
+
+        CrearPedidoRequest request = new CrearPedidoRequest("Av. Principal 123", "987654321");
+        request.setMetodoPago("TARJETA_USD");
+        request.setVersionMetodo("v1");
+        request.setCuponCodigoAplicado("CUPON38");
+
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(carritoService.obtenerOCrearCarritoEntity(1L)).thenReturn(carrito);
+        when(productoRepository.save(any(Producto.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Descuento de S/ 38.00 PEN. Al dividir por 3.80, debe descontar exactamente $10.00 USD, NO multiplicar a $144.40 USD.
+        when(crmService.validarYConsumirCupo("CUPON38", usuario, new BigDecimal("380.00"), false)).thenReturn(new BigDecimal("38.0000"));
+
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(i -> {
+            Pedido p = i.getArgument(0);
+            p.setId(99L);
+            return p;
+        });
+
+        PedidoResponse response = pedidoService.crearDesdeCarrito(1L, request);
+
+        assertNotNull(response);
+        assertEquals(99L, response.getId());
+        assertEquals("USD", response.getMonedaCodigo());
+        // 100.00 USD - 10.00 USD = 90.00 USD
+        assertEquals(0, new BigDecimal("90.0000").compareTo(response.getTotal()));
+        assertEquals(new BigDecimal("38.0000"), response.getDescuentoPen());
+        assertEquals("CUPON38", response.getCuponCodigo());
+
+        // Verificamos que validarYConsumirCupo se invocó ANTES de pedidoRepository.save,
+        // y registrarUsoCupon se invocó DESPUÉS con la instancia ya persistida
+        org.mockito.InOrder inOrder = inOrder(crmService, pedidoRepository);
+        inOrder.verify(crmService).validarYConsumirCupo("CUPON38", usuario, new BigDecimal("380.00"), false);
+        inOrder.verify(pedidoRepository).save(any(Pedido.class));
+        inOrder.verify(crmService).registrarUsoCupon(eq("CUPON38"), eq(usuario), any(Pedido.class), eq(new BigDecimal("38.0000")));
+    }
+
+    @Test
+    @DisplayName("Debe revertir cupón al cancelar pedido incluso si el pedido no tiene pago asociado (SEC-CRM-05)")
+    void cambiarEstado_canceladoSinPago_revierteCupon() {
+        Pedido pedido = new Pedido(54L, usuario, EstadoPedido.PENDIENTE, BigDecimal.valueOf(100), "Dir", "Tel");
+        pedido.setPago(null); // Sin pago
+        pedido.setCuponCodigo("PROMO10");
+
+        when(pedidoRepository.findByIdConDetalles(54L)).thenReturn(Optional.of(pedido));
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(i -> i.getArgument(0));
+
+        PedidoResponse response = pedidoService.cambiarEstado(54L, EstadoPedido.CANCELADO);
+
+        assertNotNull(response);
+        assertEquals(EstadoPedido.CANCELADO, response.getEstado());
+        verify(crmService, times(1)).revertirCupon(54L);
+        verify(pedidoRepository, times(1)).save(pedido);
+    }
+
+    @Test
+    @DisplayName("Debe canjear puntos en pedido descontando total y registrando canje")
+    void crearDesdeCarrito_conCanjePuntos_descuentaTotalYRegistraCanje() {
+        CrearPedidoRequest request = new CrearPedidoRequest("Av. Test 123", "999888777");
+        request.setMetodoPago("TARJETA_CREDITO");
+        request.setVersionMetodo("v1");
+        request.setPuntosACanjear(100);
+
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(carritoService.obtenerOCrearCarritoEntity(1L)).thenReturn(carrito);
+        when(productoRepository.save(any(Producto.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Subtotal cotizado: S/ 300.00 PEN. Descuento de 100 puntos = S/ 10.00 PEN
+        when(crmService.validarYConsumirPuntos(usuario, 100, new BigDecimal("300.00"))).thenReturn(new BigDecimal("10.0000"));
+
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(i -> {
+            Pedido p = i.getArgument(0);
+            p.setId(105L);
+            return p;
+        });
+
+        PedidoResponse response = pedidoService.crearDesdeCarrito(1L, request);
+
+        assertNotNull(response);
+        assertEquals(105L, response.getId());
+        assertEquals(100, response.getPuntosCanjeados());
+        assertEquals(new BigDecimal("10.0000"), response.getDescuentoPuntosPen());
+        // 300.00 PEN - 10.00 PEN = 290.00 PEN
+        assertEquals(0, new BigDecimal("290.0000").compareTo(response.getTotal()));
+
+        verify(crmService).validarYConsumirPuntos(usuario, 100, new BigDecimal("300.00"));
+        verify(crmService).registrarCanjePuntos(eq(usuario), any(Pedido.class), eq(100), eq(new BigDecimal("10.0000")));
+    }
+
+    @Test
+    @DisplayName("Debe revertir puntos al cancelar pedido")
+    void cambiarEstado_cancelado_reviertePuntos() {
+        Pedido pedido = new Pedido(60L, usuario, EstadoPedido.PENDIENTE, BigDecimal.valueOf(100), "Dir", "Tel");
+        pedido.setPuntosCanjeados(50);
+
+        when(pedidoRepository.findByIdConDetalles(60L)).thenReturn(Optional.of(pedido));
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(i -> i.getArgument(0));
+
+        PedidoResponse response = pedidoService.cambiarEstado(60L, EstadoPedido.CANCELADO);
+
+        assertNotNull(response);
+        assertEquals(EstadoPedido.CANCELADO, response.getEstado());
+        verify(crmService).revertirPuntos(60L);
+    }
+
+    @Test
+    @DisplayName("Debe rechazar creación de pedido si cupón no permite combinar puntos y se envían puntos (HIGH-01)")
+    void crearDesdeCarrito_cuponNoPermiteCombinarPuntos_lanzaBadRequest() {
+        CrearPedidoRequest request = new CrearPedidoRequest("Av. Test 123", "999888777");
+        request.setMetodoPago("TARJETA_CREDITO");
+        request.setVersionMetodo("v1");
+        request.setCuponCodigoAplicado("EXCLUSIVO50");
+        request.setPuntosACanjear(100);
+
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(carritoService.obtenerOCrearCarritoEntity(1L)).thenReturn(carrito);
+        when(productoRepository.save(any(Producto.class))).thenAnswer(i -> i.getArgument(0));
+
+        when(crmService.validarYConsumirCupo("EXCLUSIVO50", usuario, new BigDecimal("300.00"), true))
+                .thenThrow(new BadRequestException("El cupón 'EXCLUSIVO50' no permite ser combinado con puntos de fidelización"));
+
+        assertThrows(BadRequestException.class, () -> pedidoService.crearDesdeCarrito(1L, request));
+    }
+
+    @Test
+    @DisplayName("Debe dividir descuento de puntos PEN por tasaPen para pedidos en USD")
+    void crearDesdeCarrito_conCanjePuntosEnUsd_dividePorTasaPen() {
+        var metodoUsd = new com.tienda.ecommerce.pago.MetodoPagoConfig();
+        metodoUsd.setCodigo("TARJETA_USD");
+        metodoUsd.setNombre("Tarjeta USD");
+        metodoUsd.setProcesamiento("SIMULADO");
+        metodoUsd.setPrefijoTransaccion("TX-");
+        metodoUsd.setMonedas(java.util.Set.of("USD"));
+        when(metodoPagoConfigRepository.findById("TARJETA_USD")).thenReturn(Optional.of(metodoUsd));
+
+        var linea = new CotizacionService.Linea(5L, "Mouse", 2, new BigDecimal("50.00"), "USD", BigDecimal.ONE,
+                new BigDecimal("50.00"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("50.00"), new BigDecimal("100.00"));
+        // 100 USD cotizados, tasaPen 3.80 -> totalBasePen = 380.00 PEN
+        var cotizacionUsd = new CotizacionService.Datos(
+                "00000000-0000-0000-0000-000000000003", 1L, "huella", "USD",
+                new BigDecimal("100.00"), new BigDecimal("3.8000"), new BigDecimal("380.00"), java.util.List.of(linea)
+        );
+        when(cotizaciones.verificar(any(), any(), any())).thenReturn(cotizacionUsd);
+
+        CrearPedidoRequest request = new CrearPedidoRequest("Av. Principal 123", "987654321");
+        request.setMetodoPago("TARJETA_USD");
+        request.setVersionMetodo("v1");
+        request.setPuntosACanjear(380);
+
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(carritoService.obtenerOCrearCarritoEntity(1L)).thenReturn(carrito);
+        when(productoRepository.save(any(Producto.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Descuento de S/ 38.00 PEN en puntos. Al dividir por 3.80, debe descontar $10.00 USD
+        when(crmService.validarYConsumirPuntos(usuario, 380, new BigDecimal("380.00"))).thenReturn(new BigDecimal("38.0000"));
+
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(i -> {
+            Pedido p = i.getArgument(0);
+            p.setId(109L);
+            return p;
+        });
+
+        PedidoResponse response = pedidoService.crearDesdeCarrito(1L, request);
+
+        assertNotNull(response);
+        assertEquals(109L, response.getId());
+        assertEquals("USD", response.getMonedaCodigo());
+        // 100.00 USD - 10.00 USD = 90.00 USD
+        assertEquals(0, new BigDecimal("90.0000").compareTo(response.getTotal()));
+        assertEquals(new BigDecimal("38.0000"), response.getDescuentoPuntosPen());
+        assertEquals(380, response.getPuntosCanjeados());
     }
 }

@@ -12,15 +12,21 @@ const ICONS = {
     usuarios:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M17 11a3 3 0 0 0 0-6M21 21v-2a6 6 0 0 0-3-5.2"/></svg>',
     configuracion:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.4 2.4-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-3.4v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-2.4-2.4.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4.3v-3.4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2.4-2.4.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5v-.2h3.4v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.4 2.4-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2V14h-.2a1.7 1.7 0 0 0-1.4 1Z"/></svg>',
     reportes:'<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
-    chat:'<svg viewBox="0 0 24 24"><path d="M20 11.5a7.5 7.5 0 0 1-9.3 7.3L5 21l1.7-5.2A7.5 7.5 0 1 1 20 11.5Z"/></svg>'
+    chat:'<svg viewBox="0 0 24 24"><path d="M20 11.5a7.5 7.5 0 0 1-9.3 7.3L5 21l1.7-5.2A7.5 7.5 0 1 1 20 11.5Z"/></svg>',
+    promociones:'<svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
+    fidelizacion:'<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    'crm-clientes':'<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
 };
 const LINKS = [
     { id:'dashboard', href:'/admin/dashboard.html', label:'Dashboard' }, { id:'productos', href:'/admin/productos.html', label:'Productos' },
     { id:'categorias', href:'/admin/categorias.html', label:'Categorías' }, { id:'pedidos', href:'/admin/pedidos.html', label:'Pedidos' },
-    { id:'usuarios', href:'/admin/usuarios.html', label:'Usuarios' }, { id:'configuracion', href:'/admin/configuracion.html', label:'Configuración' },
-    { id:'reportes', href:'/admin/reportes.html', label:'Reportes' }, { id:'chat', href:'/admin/chat.html', label:'Chat clientes', dot:true }
+    { id:'usuarios', href:'/admin/usuarios.html', label:'Usuarios' }, { id:'crm-clientes', href:'/admin/crm-clientes.html', label:'Clientes CRM 360°' },
+    { id:'configuracion', href:'/admin/configuracion.html', label:'Configuración' },
+    { id:'reportes', href:'/admin/reportes.html', label:'Reportes' }, { id:'promociones', href:'/admin/promociones.html', label:'Promociones CRM' },
+    { id:'fidelizacion', href:'/admin/fidelizacion.html', label:'Fidelización CRM' },
+    { id:'chat', href:'/admin/chat.html', label:'Chat clientes', dot:true }
 ];
-const permisosNav = { dashboard:['REPORTES_VER','PEDIDOS_GESTIONAR'], productos:['PRODUCTOS_VER','PRODUCTOS_GESTIONAR','INVENTARIO_GESTIONAR'], categorias:['CATEGORIAS_GESTIONAR'], pedidos:['PEDIDOS_GESTIONAR'], usuarios:['USUARIOS_GESTIONAR'], configuracion:['CONFIGURACION_GESTIONAR'], reportes:['REPORTES_VER'], chat:['CHAT_ATENDER'] };
+const permisosNav = { dashboard:['REPORTES_VER','PEDIDOS_GESTIONAR'], productos:['PRODUCTOS_VER','PRODUCTOS_GESTIONAR','INVENTARIO_GESTIONAR'], categorias:['CATEGORIAS_GESTIONAR'], pedidos:['PEDIDOS_GESTIONAR'], usuarios:['USUARIOS_GESTIONAR'], 'crm-clientes':['CRM_GESTIONAR'], configuracion:['CONFIGURACION_GESTIONAR'], reportes:['REPORTES_VER'], chat:['CHAT_ATENDER'], promociones:['CRM_GESTIONAR'], fidelizacion:['CRM_GESTIONAR'] };
 function escapeHtml(value) { return String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function colorValido(value, respaldo) { return /^#[0-9a-f]{6}$/i.test(String(value || '').trim()) ? String(value).trim() : respaldo; }
 function rgb(hex) { const n=parseInt(hex.slice(1),16); return `${n>>16} ${(n>>8)&255} ${n&255}`; }

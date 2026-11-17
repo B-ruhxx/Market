@@ -1,0 +1,183 @@
+/* ==========================================================================
+   ELECTRONIX Admin — Módulo Promociones y Cupones CRM
+   Estándar de diseño institucional Electronix
+   ========================================================================== */
+
+/* Código promocional */
+.promo-code-badge {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 4px 9px;
+    border-radius: 6px;
+    background: var(--adm-teal-soft);
+    color: var(--adm-teal);
+    border: 1px solid rgba(53, 100, 201, 0.24);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 1px 2px rgba(27, 35, 64, 0.04);
+}
+
+.promo-code-badge svg {
+    color: var(--adm-teal);
+    opacity: 0.75;
+}
+
+/* Badge de descuento */
+.promo-discount-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+    white-space: nowrap;
+}
+
+.promo-discount-badge.fijo {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+}
+
+/* Botón interactivo para ver canjes */
+.promo-canjes-btn {
+    border: 1px solid var(--adm-line);
+    background: #ffffff;
+    color: var(--adm-ink);
+    border-radius: 7px;
+    padding: 4px 10px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(27, 35, 64, 0.03);
+}
+
+.promo-canjes-btn:hover {
+    background: var(--adm-teal-soft);
+    border-color: var(--adm-teal);
+    color: var(--adm-teal);
+    transform: translateY(-1px);
+}
+
+.promo-canjes-btn svg {
+    color: var(--adm-muted);
+    transition: color 0.15s;
+}
+
+.promo-canjes-btn:hover svg {
+    color: var(--adm-teal);
+}
+
+/* Reglas y restricciones */
+.promo-rules {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.promo-rule-highlight {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--adm-ink);
+}
+
+.promo-rule-sub {
+    font-size: 0.69rem;
+    color: var(--adm-muted);
+}
+
+/* Modal personalizado */
+.adm-modal--promo {
+    max-width: 580px;
+}
+
+.adm-modal--usos {
+    max-width: 680px;
+}
+
+/* Checkbox estilizado para combinar puntos */
+.promo-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--adm-ink);
+    padding: 10px 12px;
+    background: #f8fafc;
+    border: 1px solid var(--adm-line);
+    border-radius: 8px;
+    transition: background 0.15s;
+}
+
+.promo-checkbox-label:hover {
+    background: #f1f5f9;
+}
+
+.promo-checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--adm-teal);
+    cursor: pointer;
+}
+
+/* Acciones de tabla */
+.promo-actions-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+/* Modo oscuro */
+html[data-theme="dark"] .promo-code-badge {
+    background: rgba(96, 165, 250, 0.12);
+    color: #60a5fa;
+    border-color: rgba(96, 165, 250, 0.28);
+}
+
+html[data-theme="dark"] .promo-discount-badge {
+    background: rgba(16, 185, 129, 0.14);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+html[data-theme="dark"] .promo-discount-badge.fijo {
+    background: rgba(96, 165, 250, 0.14);
+    color: #93c5fd;
+    border-color: rgba(96, 165, 250, 0.3);
+}
+
+html[data-theme="dark"] .promo-canjes-btn {
+    background: #1a1a1a;
+    border-color: #2e2e2e;
+    color: #f0f0f0;
+}
+
+html[data-theme="dark"] .promo-canjes-btn:hover {
+    background: rgba(96, 165, 250, 0.14);
+    border-color: #60a5fa;
+    color: #60a5fa;
+}
+
+html[data-theme="dark"] .promo-checkbox-label {
+    background: #1a1a1a;
+    border-color: #2a2a2a;
+    color: #f0f0f0;
+}
+
+html[data-theme="dark"] .promo-checkbox-label:hover {
+    background: #222222;
+}

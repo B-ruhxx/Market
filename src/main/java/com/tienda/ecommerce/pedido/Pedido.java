@@ -40,9 +40,18 @@ public class Pedido {
     @Column(name = "total_base_pen", precision = 19, scale = 4) private BigDecimal totalBasePen;
     @Column(name = "cotizacion_id", unique = true, length = 36) private String cotizacionId;
     @Column(name = "cambio_snapshot", columnDefinition = "TEXT") private String cambioSnapshot;
+    @Column(name = "cupon_codigo", length = 30) private String cuponCodigo;
+    @Column(name = "descuento_pen", precision = 19, scale = 4) private BigDecimal descuentoPen = BigDecimal.ZERO;
+    @Column(name = "puntos_canjeados") private Integer puntosCanjeados = 0;
+    @Column(name = "descuento_puntos_pen", precision = 19, scale = 4) private BigDecimal descuentoPuntosPen = BigDecimal.ZERO;
+
     public BigDecimal getTotalBasePen() { return totalBasePen; } public void setTotalBasePen(BigDecimal v) { totalBasePen = v; }
     public String getCotizacionId() { return cotizacionId; } public void setCotizacionId(String v) { cotizacionId = v; }
     public String getCambioSnapshot() { return cambioSnapshot; } public void setCambioSnapshot(String v) { cambioSnapshot = v; }
+    public String getCuponCodigo() { return cuponCodigo; } public void setCuponCodigo(String v) { cuponCodigo = v; }
+    public BigDecimal getDescuentoPen() { return descuentoPen; } public void setDescuentoPen(BigDecimal v) { descuentoPen = v; }
+    public Integer getPuntosCanjeados() { return puntosCanjeados; } public void setPuntosCanjeados(Integer v) { puntosCanjeados = v; }
+    public BigDecimal getDescuentoPuntosPen() { return descuentoPuntosPen; } public void setDescuentoPuntosPen(BigDecimal v) { descuentoPuntosPen = v; }
 
     @Column(name = "direccion_envio", length = 255)
     private String direccionEnvio;

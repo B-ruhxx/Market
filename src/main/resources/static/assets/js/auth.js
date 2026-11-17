@@ -39,11 +39,25 @@ export const auth = {
     },
 
     isAdmin() {
-        return this.tienePermiso('ADMIN_ACCESO');
+        return this.tienePermiso('ADMIN_ACCESO') || this.getUser()?.rol === 'ADMIN';
     },
-    tienePermiso(codigo) { return (this.getUser()?.permisos || []).includes(codigo); },
+    tienePermiso(codigo) {
+        if (this.getUser()?.rol === 'ADMIN') return true;
+        return (this.getUser()?.permisos || []).includes(codigo);
+    },
     inicioAdmin() {
-        const rutas = [['REPORTES_VER','dashboard'],['PEDIDOS_GESTIONAR','dashboard'],['PRODUCTOS_VER','productos'],['INVENTARIO_GESTIONAR','productos'],['PRODUCTOS_GESTIONAR','productos'],['CONFIGURACION_GESTIONAR','configuracion'],['USUARIOS_GESTIONAR','usuarios'],['CHAT_ATENDER','chat'],['APARIENCIA_GESTIONAR','apariencia']];
+        const rutas = [
+            ['REPORTES_VER','dashboard'],
+            ['PEDIDOS_GESTIONAR','dashboard'],
+            ['PRODUCTOS_VER','productos'],
+            ['INVENTARIO_GESTIONAR','productos'],
+            ['PRODUCTOS_GESTIONAR','productos'],
+            ['CRM_GESTIONAR','crm-clientes'],
+            ['CONFIGURACION_GESTIONAR','configuracion'],
+            ['USUARIOS_GESTIONAR','usuarios'],
+            ['CHAT_ATENDER','chat'],
+            ['APARIENCIA_GESTIONAR','apariencia']
+        ];
         return '/admin/' + (rutas.find(([p]) => this.tienePermiso(p))?.[1] || 'dashboard') + '.html';
     },
 
@@ -115,9 +129,13 @@ export const auth = {
             'categorias.html': ['CATEGORIAS_GESTIONAR'], 'usuarios.html': ['USUARIOS_GESTIONAR'],
             'pedidos.html': ['PEDIDOS_GESTIONAR'], 'reportes.html': ['REPORTES_VER'],
             'dashboard.html': ['REPORTES_VER','PEDIDOS_GESTIONAR'], 'chat.html': ['CHAT_ATENDER'],
-            'configuracion.html': ['CONFIGURACION_GESTIONAR'], 'apariencia.html': ['APARIENCIA_GESTIONAR'], 'estudio.html': ['APARIENCIA_GESTIONAR']
+            'configuracion.html': ['CONFIGURACION_GESTIONAR'], 'apariencia.html': ['APARIENCIA_GESTIONAR'], 'estudio.html': ['APARIENCIA_GESTIONAR'],
+            'promociones.html': ['CRM_GESTIONAR'], 'fidelizacion.html': ['CRM_GESTIONAR'],
+            'crm-clientes.html': ['CRM_GESTIONAR']
         };
-        if (!this.isAuthenticated() || !this.isAdmin() || !(permisos[pagina] || []).some(p => this.tienePermiso(p))) {
+        const esAdminRol = this.getUser()?.rol === 'ADMIN';
+        const tienePermisoPagina = esAdminRol || (permisos[pagina] || []).some(p => this.tienePermiso(p));
+        if (!this.isAuthenticated() || !this.isAdmin() || !tienePermisoPagina) {
             showToast('Acceso restringido: Se requieren permisos de Administrador', 'error');
             setTimeout(() => {
                 window.location.href = this.isAuthenticated() ? '/index.html' : '/login.html?redirect=' + encodeURIComponent(window.location.pathname);

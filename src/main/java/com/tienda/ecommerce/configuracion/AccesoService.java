@@ -10,7 +10,7 @@ public class AccesoService {
     public static final Set<String> PERMISOS = Set.of("ADMIN_ACCESO", "PRODUCTOS_VER", "PRODUCTOS_GESTIONAR",
             "PRECIOS_GESTIONAR", "INVENTARIO_GESTIONAR", "CATEGORIAS_GESTIONAR", "PEDIDOS_GESTIONAR",
             "PAGOS_VERIFICAR", "USUARIOS_GESTIONAR", "REPORTES_VER", "CHAT_ATENDER", "APARIENCIA_GESTIONAR",
-            "CONFIGURACION_GESTIONAR", "COMPRAR");
+            "CONFIGURACION_GESTIONAR", "COMPRAR", "CRM_GESTIONAR", "CRM_VER_PUNTOS");
     private final RolConfigRepository roles;
     public AccesoService(RolConfigRepository roles) { this.roles = roles; }
     public Set<String> permisos(Usuario usuario) {

@@ -26,11 +26,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class PedidoServiceImpl implements PedidoService {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PedidoServiceImpl.class);
 
     private final PedidoRepository pedidoRepository;
     private final ProductoRepository productoRepository;
@@ -42,6 +45,7 @@ public class PedidoServiceImpl implements PedidoService {
     private final com.tienda.ecommerce.pago.FormularioPagoService formularios;
     private final jakarta.persistence.EntityManager entityManager;
     private final CacheManager cacheManager;
+    private final com.tienda.ecommerce.crm.CrmService crmService;
 
     public PedidoServiceImpl(
             PedidoRepository pedidoRepository,
@@ -53,7 +57,8 @@ public class PedidoServiceImpl implements PedidoService {
             CotizacionService cotizaciones,
             com.tienda.ecommerce.pago.FormularioPagoService formularios,
             jakarta.persistence.EntityManager entityManager,
-            @org.springframework.beans.factory.annotation.Autowired(required = false) CacheManager cacheManager
+            @org.springframework.beans.factory.annotation.Autowired(required = false) CacheManager cacheManager,
+            com.tienda.ecommerce.crm.CrmService crmService
     ) {
         this.pedidoRepository = pedidoRepository;
         this.productoRepository = productoRepository;
@@ -65,6 +70,7 @@ public class PedidoServiceImpl implements PedidoService {
         this.formularios = formularios;
         this.entityManager = entityManager;
         this.cacheManager = cacheManager;
+        this.crmService = crmService;
     }
 
     @Override
@@ -144,6 +150,47 @@ public class PedidoServiceImpl implements PedidoService {
             total = total.add(subtotal);
         }
 
+        boolean deseaCanjearPuntos = request.getPuntosACanjear() != null && request.getPuntosACanjear() > 0;
+        BigDecimal descuentoPen = BigDecimal.ZERO;
+        String cuponCodigo = null;
+        if (request.getCuponCodigoAplicado() != null && !request.getCuponCodigoAplicado().isBlank()) {
+            cuponCodigo = request.getCuponCodigoAplicado().trim().toUpperCase();
+            descuentoPen = crmService.validarYConsumirCupo(
+                    cuponCodigo,
+                    usuario,
+                    cotizacion.totalBasePen(),
+                    deseaCanjearPuntos
+            );
+            BigDecimal tasaPen = cotizacion.tasaPen();
+            BigDecimal descuentoMoneda = (tasaPen != null && tasaPen.compareTo(BigDecimal.ZERO) > 0)
+                    ? descuentoPen.divide(tasaPen, 4, RoundingMode.HALF_UP)
+                    : descuentoPen;
+            total = total.subtract(descuentoMoneda).max(BigDecimal.ZERO);
+            pedido.setCuponCodigo(cuponCodigo);
+            pedido.setDescuentoPen(descuentoPen);
+            pedido.setTotalBasePen(cotizacion.totalBasePen().subtract(descuentoPen).max(BigDecimal.ZERO));
+        }
+
+        BigDecimal descuentoPuntosPen = BigDecimal.ZERO;
+        Integer puntosCanjeados = null;
+        if (deseaCanjearPuntos) {
+            puntosCanjeados = request.getPuntosACanjear();
+            descuentoPuntosPen = crmService.validarYConsumirPuntos(
+                    usuario,
+                    puntosCanjeados,
+                    cotizacion.totalBasePen()
+            );
+            BigDecimal tasaPen = cotizacion.tasaPen();
+            BigDecimal descPuntosMoneda = (tasaPen != null && tasaPen.compareTo(BigDecimal.ZERO) > 0)
+                    ? descuentoPuntosPen.divide(tasaPen, 4, RoundingMode.HALF_UP)
+                    : descuentoPuntosPen;
+            total = total.subtract(descPuntosMoneda).max(BigDecimal.ZERO);
+            pedido.setPuntosCanjeados(puntosCanjeados);
+            pedido.setDescuentoPuntosPen(descuentoPuntosPen);
+            BigDecimal baseActual = pedido.getTotalBasePen() != null ? pedido.getTotalBasePen() : cotizacion.totalBasePen();
+            pedido.setTotalBasePen(baseActual.subtract(descuentoPuntosPen).max(BigDecimal.ZERO));
+        }
+
         pedido.setTotal(total);
         pedido.setDetalles(detalles);
 
@@ -191,6 +238,25 @@ public class PedidoServiceImpl implements PedidoService {
         // Guardar el pedido, detalles, pago y envío en cascada
         Pedido pedidoGuardado = pedidoRepository.save(pedido);
 
+        // Registrar el uso del cupón asociando el pedido ya persistido con ID generado (SEC-CRM-02)
+        if (cuponCodigo != null) {
+            crmService.registrarUsoCupon(cuponCodigo, usuario, pedidoGuardado, descuentoPen);
+        }
+
+        // Registrar canje de puntos asociando el pedido ya persistido
+        if (puntosCanjeados != null && puntosCanjeados > 0) {
+            crmService.registrarCanjePuntos(usuario, pedidoGuardado, puntosCanjeados, descuentoPuntosPen);
+        }
+
+        // Si el pago nace APROBADO (ej. tarjeta simulada cobro instantáneo), acreditar puntos inmediatamente
+        if (estadoPago == com.tienda.ecommerce.pago.EstadoPago.APROBADO) {
+            try {
+                crmService.acreditarPuntosPorCompra(pedidoGuardado);
+            } catch (Exception e) {
+                log.error("Fallo al acreditar puntos para el pedido #{}: {}", pedidoGuardado.getId(), e.getMessage(), e);
+            }
+        }
+
         // Vaciar el carrito del usuario tras confirmar la compra
         carrito.getItems().clear();
         carritoRepository.save(carrito);
@@ -198,10 +264,10 @@ public class PedidoServiceImpl implements PedidoService {
         // Invalidar cache de los productos comprados para evitar inconsistencias de stock (HIGH-01)
         if (cacheManager != null) {
             Cache cache = cacheManager.getCache("productos");
-            if (cache != null) {
-                for (ItemCarrito item : items) {
-                    if (item.getProducto() != null && item.getProducto().getId() != null) {
-                        cache.evict(item.getProducto().getId());
+            if (cache != null && pedidoGuardado.getDetalles() != null) {
+                for (DetallePedido detalle : pedidoGuardado.getDetalles()) {
+                    if (detalle.getProducto() != null && detalle.getProducto().getId() != null) {
+                        cache.evict(detalle.getProducto().getId());
                     }
                 }
             }
@@ -253,19 +319,32 @@ public class PedidoServiceImpl implements PedidoService {
         // - YAPE/PLIN/TRANSFERENCIA: NO se auto-aprueban (requieren verificación
         //   manual del admin con N° de operación), salvo que ya estuvieran APROBADOS.
         // - TARJETA: ya nace APROBADA.
-        // - CANCELADO: pago queda RECHAZADO (salvo REEMBOLSADO).
-        if (pedido.getPago() != null && pedido.getPago().getEstadoPago() != null) {
-            com.tienda.ecommerce.pago.EstadoPago estadoPagoActual = pedido.getPago().getEstadoPago();
-            String procesamiento = pedido.getPago().getProcesamientoPago();
-            if (nuevoEstado == EstadoPedido.CANCELADO) {
-                if (estadoPagoActual != com.tienda.ecommerce.pago.EstadoPago.REEMBOLSADO) {
+        // - CANCELADO: pago queda RECHAZADO (salvo REEMBOLSADO) y se revierte el cupón
+        //   independientemente de si existe registro de pago (SEC-CRM-05).
+        if (nuevoEstado == EstadoPedido.CANCELADO) {
+            if (pedido.getPago() != null && pedido.getPago().getEstadoPago() != null) {
+                if (pedido.getPago().getEstadoPago() != com.tienda.ecommerce.pago.EstadoPago.REEMBOLSADO) {
                     pedido.getPago().setEstadoPago(com.tienda.ecommerce.pago.EstadoPago.RECHAZADO);
                 }
-            } else if (nuevoEstado == EstadoPedido.ENTREGADO
-                    && estadoPagoActual == com.tienda.ecommerce.pago.EstadoPago.PENDIENTE
-                    && "CONTRA_ENTREGA".equals(procesamiento)) {
-                pedido.getPago().setEstadoPago(com.tienda.ecommerce.pago.EstadoPago.APROBADO);
-                pedido.getPago().setFechaPago(java.time.LocalDateTime.now());
+            }
+            if (pedido.getCuponCodigo() != null) {
+                crmService.revertirCupon(pedido.getId());
+            }
+            try {
+                crmService.revertirPuntos(pedido.getId());
+            } catch (Exception e) {
+                log.error("Fallo al revertir puntos al cancelar pedido #{}: {}", pedido.getId(), e.getMessage(), e);
+            }
+        } else if (nuevoEstado == EstadoPedido.ENTREGADO
+                && pedido.getPago() != null
+                && pedido.getPago().getEstadoPago() == com.tienda.ecommerce.pago.EstadoPago.PENDIENTE
+                && "CONTRA_ENTREGA".equals(pedido.getPago().getProcesamientoPago())) {
+            pedido.getPago().setEstadoPago(com.tienda.ecommerce.pago.EstadoPago.APROBADO);
+            pedido.getPago().setFechaPago(java.time.LocalDateTime.now());
+            try {
+                crmService.acreditarPuntosPorCompra(pedido);
+            } catch (Exception e) {
+                log.error("Fallo al acreditar puntos al entregar pedido contraentrega #{}: {}", pedido.getId(), e.getMessage(), e);
             }
         }
 
@@ -291,6 +370,11 @@ public class PedidoServiceImpl implements PedidoService {
         pedido.getPago().setEstadoPago(estadoPago);
         if (estadoPago == com.tienda.ecommerce.pago.EstadoPago.APROBADO) {
             pedido.getPago().setFechaPago(java.time.LocalDateTime.now());
+            try {
+                crmService.acreditarPuntosPorCompra(pedido);
+            } catch (Exception e) {
+                log.error("Fallo al acreditar puntos al verificar pago de pedido #{}: {}", pedido.getId(), e.getMessage(), e);
+            }
         }
         Pedido actualizado = pedidoRepository.save(pedido);
         return mapearADto(actualizado);
@@ -342,6 +426,10 @@ public class PedidoServiceImpl implements PedidoService {
         respuesta.setProcesamientoPago(pago != null ? pago.getProcesamientoPago() : null);
         respuesta.setMetodoNombre(pago != null ? pago.getMetodoNombre() : null);
         respuesta.setTotalBasePen(p.getTotalBasePen());
+        respuesta.setCuponCodigo(p.getCuponCodigo());
+        respuesta.setDescuentoPen(p.getDescuentoPen());
+        respuesta.setPuntosCanjeados(p.getPuntosCanjeados());
+        respuesta.setDescuentoPuntosPen(p.getDescuentoPuntosPen());
         return respuesta;
     }
 }

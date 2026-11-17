@@ -70,6 +70,7 @@ public class SecurityConfig {
 
                         // Endpoints de métricas, info y Prometheus restringidos a roles administrativos
                         .requestMatchers(
+                                "/actuator",
                                 "/actuator/info",
                                 "/actuator/prometheus",
                                 "/actuator/metrics",
@@ -87,11 +88,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/productos/admin").hasAnyAuthority("PRODUCTOS_VER", "PRODUCTOS_GESTIONAR", "INVENTARIO_GESTIONAR")
                         .requestMatchers(HttpMethod.GET, "/api/productos/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/crm/niveles").permitAll()
 
                         // Handshake de WebSocket
                         .requestMatchers("/ws-chat/**").permitAll()
 
                         // Endpoints administrativos
+                        .requestMatchers("/api/admin/crm/**").hasAuthority("CRM_GESTIONAR")
                         .requestMatchers("/api/admin/**").hasAuthority("CONFIGURACION_GESTIONAR")
                         .requestMatchers("/api/reportes/**").hasAuthority("REPORTES_VER")
 

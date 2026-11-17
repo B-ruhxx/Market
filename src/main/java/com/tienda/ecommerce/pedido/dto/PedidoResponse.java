@@ -28,8 +28,16 @@ public class PedidoResponse {
     private String procesamientoPago;
     private String metodoNombre;
     private BigDecimal totalBasePen;
+    private String cuponCodigo;
+    private BigDecimal descuentoPen;
+    private Integer puntosCanjeados;
+    private BigDecimal descuentoPuntosPen;
     public String getMetodoNombre() { return metodoNombre; } public void setMetodoNombre(String v) { metodoNombre = v; }
     public BigDecimal getTotalBasePen() { return totalBasePen; } public void setTotalBasePen(BigDecimal v) { totalBasePen = v; }
+    public String getCuponCodigo() { return cuponCodigo; } public void setCuponCodigo(String v) { cuponCodigo = v; }
+    public BigDecimal getDescuentoPen() { return descuentoPen; } public void setDescuentoPen(BigDecimal v) { descuentoPen = v; }
+    public Integer getPuntosCanjeados() { return puntosCanjeados; } public void setPuntosCanjeados(Integer v) { puntosCanjeados = v; }
+    public BigDecimal getDescuentoPuntosPen() { return descuentoPuntosPen; } public void setDescuentoPuntosPen(BigDecimal v) { descuentoPuntosPen = v; }
 
     public PedidoResponse() {
     }

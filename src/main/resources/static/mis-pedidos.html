@@ -122,8 +122,76 @@
     </header>
 
     <main class="max-w-6xl mx-auto px-4 sm:px-8 py-8 flex-1 w-full">
+        <!-- Tarjeta Billetera CRM Club -->
+        <section id="billetera-crm-card" class="mb-6 bg-gradient-to-r from-neutral-900 via-neutral-800 to-amber-950 text-white p-5 sm:p-6 rounded-2xl border border-amber-500/20 shadow-lg hidden">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-xl bg-amber-500 text-neutral-950 font-black flex items-center justify-center text-lg shadow">★</span>
+                        <div>
+                            <h2 class="text-sm sm:text-base font-extrabold uppercase tracking-wide flex flex-wrap items-center gap-2">
+                                Electronix Club
+                                <span id="billetera-nivel-badge" class="text-[10px] bg-amber-900/60 text-amber-300 border border-amber-600/40 px-2 py-0.5 rounded-full font-extrabold">BRONCE</span>
+                                <span id="billetera-multiplicador-badge" class="text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold">1.00x Pts</span>
+                                <span id="billetera-envio-badge" class="hidden text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">Envío Gratis VIP</span>
+                            </h2>
+                            <p class="text-[11px] text-neutral-300">Acumula puntos en cada compra y canjéalos por descuentos directos en caja.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6 bg-neutral-950/40 border border-amber-500/20 px-4 py-3 rounded-xl">
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-neutral-400 block tracking-wider">Saldo Disponible</span>
+                        <span id="billetera-saldo-puntos" class="text-2xl font-black text-amber-400">0 pts</span>
+                    </div>
+                    <div class="h-8 w-px bg-neutral-700"></div>
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-neutral-400 block tracking-wider">Valor Estimado</span>
+                        <span id="billetera-valor-pen" class="text-lg font-bold text-white">S/ 0.00</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Barra de Progreso de Nivel (Fase 3) -->
+            <div id="billetera-progreso-nivel-container" class="mt-4 pt-3 border-t border-neutral-700/60">
+                <div class="flex items-center justify-between text-xs mb-1.5">
+                    <span class="text-neutral-300 font-medium flex items-center gap-1.5">
+                        <span>🏅</span>
+                        <span id="billetera-progreso-texto">Cargando progreso de nivel...</span>
+                    </span>
+                    <span id="billetera-progreso-pct" class="font-bold text-amber-400 ml-2">0%</span>
+                </div>
+                <div class="w-full bg-neutral-950/80 rounded-full h-2 overflow-hidden border border-neutral-700/60">
+                    <div id="billetera-progreso-barra" class="bg-gradient-to-r from-amber-500 to-yellow-400 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Historial de Puntos colapsable -->
+            <div class="mt-4 pt-3 border-t border-neutral-700/60 flex items-center justify-between">
+                <span id="billetera-puntos-historicos" class="text-xs text-neutral-400">Total histórico acumulado: 0 pts</span>
+                <button type="button" id="btn-toggle-historial-puntos" class="text-xs text-amber-400 hover:text-amber-300 font-bold underline transition-colors">
+                    Ver movimientos de puntos ▼
+                </button>
+            </div>
+            <div id="historial-puntos-panel" class="hidden mt-3 max-h-56 overflow-y-auto rounded-xl bg-neutral-950/60 border border-neutral-800 p-3 text-xs">
+                <table class="w-full text-left text-[11px]">
+                    <thead class="text-neutral-400 border-b border-neutral-800">
+                        <tr>
+                            <th class="py-1.5 px-2 font-semibold">Fecha</th>
+                            <th class="py-1.5 px-2 font-semibold">Tipo</th>
+                            <th class="py-1.5 px-2 font-semibold">Descripción</th>
+                            <th class="py-1.5 px-2 font-semibold text-right">Puntos</th>
+                            <th class="py-1.5 px-2 font-semibold text-right">Saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historial-puntos-tbody" class="divide-y divide-neutral-900 text-neutral-300">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
         <div class="mb-6">
-            <h1 class="font-['Montserrat',sans-serif] text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight uppercase>Historial de Mis Pedidos</h1>
+            <h1 class="font-['Montserrat',sans-serif] text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight uppercase">Historial de Mis Pedidos</h1>
             <p class="text-xs text-neutral-500 mt-1">Consulta el progreso, estado de entrega y detalles de tus compras en Electronix</p>
         </div>
 

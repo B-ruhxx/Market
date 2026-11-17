@@ -9,6 +9,110 @@ if (!auth.protegerRutaAutenticada()) {
     // Guard
 } else {
     cargarPedidos();
+    cargarBilletera().catch(() => {});
+}
+
+async function cargarBilletera() {
+    try {
+        const res = await api.get('/api/crm/puntos/mi-billetera');
+        if (!res.exito || !res.datos) return;
+        const b = res.datos;
+        const card = document.getElementById('billetera-crm-card');
+        if (!card) return;
+
+        card.classList.remove('hidden');
+        document.getElementById('billetera-saldo-puntos').textContent = `${b.saldoPuntos} pts`;
+        const valPen = Number(b.valorEstimadoPen ?? b.equivalentePen ?? 0).toFixed(2);
+        document.getElementById('billetera-valor-pen').textContent = `S/ ${valPen}`;
+        document.getElementById('billetera-puntos-historicos').textContent = `Total histórico acumulado: ${b.puntosHistoricos || 0} pts`;
+
+        // Renderizado de Nivel de Fidelidad (Fase 3)
+        const nivelCodigo = (b.nivelCodigo || 'BRONCE').toUpperCase();
+        const nivelNombre = b.nivelNombre || nivelCodigo;
+        const nivelBadge = document.getElementById('billetera-nivel-badge');
+        const multBadge = document.getElementById('billetera-multiplicador-badge');
+        const envioBadge = document.getElementById('billetera-envio-badge');
+
+        if (nivelBadge) {
+            nivelBadge.textContent = nivelNombre;
+            nivelBadge.className = 'text-[10px] px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wide border ';
+            if (nivelCodigo === 'ORO') {
+                nivelBadge.className += 'bg-yellow-500/20 text-yellow-300 border-yellow-400/50 shadow-sm';
+            } else if (nivelCodigo === 'PLATA') {
+                nivelBadge.className += 'bg-slate-700/60 text-slate-200 border-slate-400/40';
+            } else {
+                nivelBadge.className += 'bg-amber-900/60 text-amber-300 border-amber-600/40';
+            }
+        }
+
+        if (multBadge) {
+            const mult = Number(b.multiplicador || 1).toFixed(2);
+            multBadge.textContent = `${mult}x Pts`;
+        }
+
+        if (envioBadge) {
+            if (b.beneficioEnvioGratis) {
+                envioBadge.classList.remove('hidden');
+            } else {
+                envioBadge.classList.add('hidden');
+            }
+        }
+
+        // Barra de progreso y meta anual
+        const progresoTexto = document.getElementById('billetera-progreso-texto');
+        const progresoPct = document.getElementById('billetera-progreso-pct');
+        const progresoBarra = document.getElementById('billetera-progreso-barra');
+
+        if (progresoTexto && progresoBarra && progresoPct) {
+            const gastoAnual = Number(b.gastoAnualPen || 0).toFixed(2);
+            if (b.siguienteNivelNombre) {
+                const faltante = Number(b.montoFaltanteSiguienteNivelPen || 0).toFixed(2);
+                progresoTexto.innerHTML = `Llevas <strong>S/ ${gastoAnual}</strong> en compras este año. Te faltan <strong>S/ ${faltante}</strong> para alcanzar nivel <strong>${esc(b.siguienteNivelNombre)}</strong>.`;
+                const pct = Math.min(100, Math.max(0, Number(b.porcentajeProgresoNivel || 0)));
+                progresoPct.textContent = `${pct.toFixed(0)}%`;
+                progresoBarra.style.width = `${pct}%`;
+            } else {
+                progresoTexto.innerHTML = `¡Felicidades! Alcanzaste el <strong>nivel ${esc(nivelNombre)}</strong> (máximo nivel) con <strong>${Number(b.multiplicador || 1.5).toFixed(2)}x puntos</strong> y beneficios VIP exclusivos.`;
+                progresoPct.textContent = `100%`;
+                progresoBarra.style.width = `100%`;
+            }
+        }
+
+        const btnToggle = document.getElementById('btn-toggle-historial-puntos');
+        const panel = document.getElementById('historial-puntos-panel');
+        const tbody = document.getElementById('historial-puntos-tbody');
+
+        if (btnToggle && panel) {
+            btnToggle.onclick = () => {
+                const oculto = panel.classList.contains('hidden');
+                panel.classList.toggle('hidden');
+                btnToggle.textContent = oculto ? 'Ocultar movimientos ▲' : 'Ver movimientos de puntos ▼';
+            };
+        }
+
+        if (tbody) {
+            const txs = b.transaccionesRecientes ?? b.transacciones ?? [];
+            if (txs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="py-3 text-center text-neutral-500">Aún no registras movimientos de puntos</td></tr>';
+            } else {
+                tbody.innerHTML = txs.map(t => {
+                    const esPos = t.puntos > 0;
+                    const ptsClass = esPos ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold';
+                    const ptsSign = esPos ? `+${t.puntos}` : `${t.puntos}`;
+                    const fecha = t.fecha ? new Date(t.fecha).toLocaleDateString('es-PE', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '-';
+                    return `<tr>
+                        <td class="py-1.5 px-2 text-neutral-400">${fecha}</td>
+                        <td class="py-1.5 px-2 font-mono text-[10px] text-neutral-300">${esc(t.tipo)}</td>
+                        <td class="py-1.5 px-2 text-neutral-200">${esc(t.descripcion || '-')}</td>
+                        <td class="py-1.5 px-2 text-right ${ptsClass}">${ptsSign} pts</td>
+                        <td class="py-1.5 px-2 text-right text-neutral-400 font-mono">${t.saldoResultante} pts</td>
+                    </tr>`;
+                }).join('');
+            }
+        }
+    } catch (_) {
+        // No tiene billetera o permiso, permanece oculta
+    }
 }
 
 const container = document.getElementById('orders-container');
@@ -237,6 +341,19 @@ function mostrarModalDetalle(pedido) {
             <h4 class="font-bold text-neutral-900 text-xs uppercase tracking-wider mb-2">Artículos del pedido</h4>
             ${itemsList}
         </div>
+        ${(pedido.cuponCodigo && Number(pedido.descuentoPen || 0) > 0) || Number(pedido.puntosCanjeados || 0) > 0 ? `
+        <div class="p-3 bg-neutral-50 rounded-xl border border-neutral-200 text-xs space-y-1.5">
+            ${pedido.cuponCodigo && Number(pedido.descuentoPen || 0) > 0 ? `
+            <div class="flex justify-between text-emerald-700">
+                <span>Cupón aplicado (<strong>${esc(pedido.cuponCodigo)}</strong>)</span>
+                <span class="font-bold">-S/ ${Number(pedido.descuentoPen).toFixed(2)}</span>
+            </div>` : ''}
+            ${Number(pedido.puntosCanjeados || 0) > 0 ? `
+            <div class="flex justify-between text-amber-700">
+                <span>Puntos canjeados (<strong>${pedido.puntosCanjeados} pts</strong>)</span>
+                <span class="font-bold">-S/ ${Number(pedido.descuentoPuntosPen || 0).toFixed(2)}</span>
+            </div>` : ''}
+        </div>` : ''}
         <div class="pt-3 flex justify-between items-baseline border-t border-neutral-200">
             <span class="text-xs font-bold text-neutral-700 uppercase">Monto total</span>
             <span class="text-xl font-black text-neutral-900">${total}</span>

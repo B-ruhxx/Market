@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -38,4 +39,29 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     List<Object[]> ventasPorMoneda(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
     @Query("SELECT COUNT(p) FROM Pedido p JOIN p.pago pag WHERE p.monedaCodigo <> 'PEN' AND p.totalBasePen IS NULL AND pag.estadoPago = com.tienda.ecommerce.pago.EstadoPago.APROBADO AND p.estado <> com.tienda.ecommerce.pedido.EstadoPedido.CANCELADO AND p.fecha BETWEEN :desde AND :hasta")
     long sinConversionHistorica(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
+
+    @Query("SELECT COALESCE(SUM(COALESCE(p.totalBasePen, CASE WHEN p.monedaCodigo = 'PEN' THEN p.total ELSE 0 END)), 0) " +
+           "FROM Pedido p JOIN p.pago pag " +
+           "WHERE p.usuario.id = :usuarioId " +
+           "AND p.estado <> com.tienda.ecommerce.pedido.EstadoPedido.CANCELADO " +
+           "AND pag.estadoPago = com.tienda.ecommerce.pago.EstadoPago.APROBADO " +
+           "AND p.fecha >= :desde")
+    BigDecimal calcularGastoAnualPen(@Param("usuarioId") Long usuarioId, @Param("desde") LocalDateTime desde);
+
+    @Query("SELECT p FROM Pedido p JOIN p.pago pag " +
+           "WHERE p.usuario.id = :usuarioId " +
+           "AND p.estado <> com.tienda.ecommerce.pedido.EstadoPedido.CANCELADO " +
+           "AND pag.estadoPago = com.tienda.ecommerce.pago.EstadoPago.APROBADO " +
+           "ORDER BY p.fecha DESC")
+    List<Pedido> findPedidosAprobadosPorUsuario(@Param("usuarioId") Long usuarioId);
+
+    @Query("SELECT p.usuario.id, " +
+           "COALESCE(SUM(COALESCE(p.totalBasePen, CASE WHEN p.monedaCodigo = 'PEN' THEN p.total ELSE 0 END)), 0), " +
+           "COUNT(p), " +
+           "MAX(p.fecha) " +
+           "FROM Pedido p JOIN p.pago pag " +
+           "WHERE p.estado <> com.tienda.ecommerce.pedido.EstadoPedido.CANCELADO " +
+           "AND pag.estadoPago = com.tienda.ecommerce.pago.EstadoPago.APROBADO " +
+           "GROUP BY p.usuario.id")
+    List<Object[]> calcularMetricasRfmPorUsuario();
 }

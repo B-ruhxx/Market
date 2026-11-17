@@ -25,9 +25,13 @@ public class CrearPedidoRequest {
     private String cotizacionToken;
     private String versionMetodo;
     private java.util.Map<String,String> datosPago;
+    private String cuponCodigoAplicado;
+    private Integer puntosACanjear;
     public String getCotizacionToken() { return cotizacionToken; } public void setCotizacionToken(String v) { cotizacionToken = v; }
     public String getVersionMetodo() { return versionMetodo; } public void setVersionMetodo(String v) { versionMetodo = v; }
     public java.util.Map<String,String> getDatosPago() { return datosPago; } public void setDatosPago(java.util.Map<String,String> v) { datosPago = v; }
+    public String getCuponCodigoAplicado() { return cuponCodigoAplicado; } public void setCuponCodigoAplicado(String v) { cuponCodigoAplicado = v; }
+    public Integer getPuntosACanjear() { return puntosACanjear; } public void setPuntosACanjear(Integer v) { puntosACanjear = v; }
 
     public CrearPedidoRequest() {
     }

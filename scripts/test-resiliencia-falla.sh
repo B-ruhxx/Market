@@ -5,8 +5,8 @@
 # ==============================================================================
 set -euo pipefail
 
-CONTAINER_NAME="electronix-app"
-HEALTH_URL="http://localhost:8090/actuator/health"
+CONTAINER_NAME="${1:-${CONTAINER_NAME:-electronix-app}}"
+HEALTH_URL="${2:-${HEALTH_URL:-http://localhost:8090/actuator/health}}"
 
 echo "=========================================================="
 echo "   ELECTRONIX - PRUEBA DE FALLA Y RESILIENCIA (RTO)       "

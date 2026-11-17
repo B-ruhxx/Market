@@ -1,0 +1,182 @@
+/* ==========================================================================
+   ELECTRONIX Admin — Módulo Fidelización y Puntos CRM
+   Estándar de diseño institucional Electronix
+   ========================================================================== */
+
+/* Grid de configuración y billetera */
+.fid-main-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 20px;
+    align-items: start;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 1100px) {
+    .fid-main-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Buscador de billetera de cliente */
+.fid-search-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.fid-search-input {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Ficha resumen de billetera del cliente */
+.fid-wallet-card {
+    background: #f8fafc;
+    border: 1px solid var(--adm-line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    box-shadow: 0 1px 3px rgba(27, 35, 64, 0.03);
+}
+
+.fid-wallet-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.fid-wallet-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--adm-teal) 0%, var(--adm-teal-bright) 100%);
+    color: #ffffff;
+    font-size: 1.15rem;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.fid-wallet-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.fid-wallet-stats {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    text-align: right;
+}
+
+.fid-wallet-stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.fid-wallet-stat-lbl {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--adm-muted);
+}
+
+.fid-wallet-pts {
+    font-size: 1.45rem;
+    font-weight: 900;
+    color: #d97706;
+    line-height: 1.1;
+}
+
+.fid-wallet-pen {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--adm-ink);
+    line-height: 1.1;
+}
+
+/* Caja de ajuste manual */
+.fid-adjust-box {
+    background: #ffffff;
+    border: 1px solid var(--adm-line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 1px 3px rgba(27, 35, 64, 0.03);
+}
+
+.fid-adjust-title {
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--adm-ink);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Hint cuando no hay búsqueda */
+.fid-wallet-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--adm-muted);
+    font-size: 0.8rem;
+    background: #f8fafc;
+    border: 1px dashed var(--adm-line);
+    border-radius: 12px;
+}
+
+.fid-wallet-empty svg {
+    margin: 0 auto 10px;
+    color: var(--adm-faint);
+    display: block;
+}
+
+/* Badges de tiers en tabla niveles */
+.badge-tier-lg {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+}
+
+/* Modal editar nivel */
+.adm-modal--nivel {
+    max-width: 440px;
+}
+
+/* Modo oscuro */
+html[data-theme="dark"] .fid-wallet-card,
+html[data-theme="dark"] .fid-wallet-empty {
+    background: #141414;
+    border-color: #282828;
+}
+
+html[data-theme="dark"] .fid-adjust-box {
+    background: #1a1a1a;
+    border-color: #282828;
+}
+
+html[data-theme="dark"] .fid-wallet-pen {
+    color: #f0f0f0;
+}

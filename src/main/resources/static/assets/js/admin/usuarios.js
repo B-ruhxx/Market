@@ -1,4 +1,4 @@
-﻿import { api } from '/assets/js/api.js';
+import { api } from '/assets/js/api.js';
 import { auth } from '/assets/js/auth.js';
 import { renderAdminShell } from '/assets/js/ui/adminShell.js?v=2';
 import { showToast } from '/assets/js/ui/toast.js';
@@ -190,6 +190,7 @@ async function pintar() {
                 <td class="adm-sub">${fmtFecha(u.fechaRegistro)}</td>
                 <td class="num adm-celda-num">
                     <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+                    <a href="/admin/crm-clientes.html?id=${u.id}" class="adm-btn adm-btn-sm" title="Ver ficha CRM 360°">CRM 360°</a>
                     <button class="adm-btn adm-btn-edit adm-btn-sm btn-editar" title="Editar usuario">Editar</button>
                     ${u.activo
                         ? '<button class="adm-btn adm-btn-del adm-btn-sm btn-estado">Desactivar</button>'

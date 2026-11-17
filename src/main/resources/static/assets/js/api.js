@@ -48,7 +48,13 @@ export const api = {
             const data = await response.json().catch(() => null);
 
             if (!response.ok) {
-                const mensaje = (data && data.mensaje) ? data.mensaje : `Error del servidor (${response.status})`;
+                let mensaje = (data && data.mensaje) ? data.mensaje : `Error del servidor (${response.status})`;
+                if (data && data.datos && typeof data.datos === 'object' && !Array.isArray(data.datos)) {
+                    const detalles = Object.values(data.datos).filter(Boolean).join('. ');
+                    if (detalles) {
+                        mensaje = detalles;
+                    }
+                }
                 const error = new Error(mensaje);
                 error.status = response.status;
                 error.data = data;
