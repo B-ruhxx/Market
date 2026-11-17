@@ -11,7 +11,8 @@ const gruposFooter = [
     ]],
     ['Tu cuenta', [
         ['Mi cuenta', '/login.html'], ['Crear una cuenta', '/registro.html'],
-        ['Mis pedidos', '/mis-pedidos.html'], ['Mi carrito', '/carrito.html']
+        ['Mis pedidos', '/mis-pedidos.html'], ['Club Puntos (CMR)', '/puntos.html'],
+        ['Mi carrito', '/carrito.html']
     ]],
     ['Podemos ayudarte', [
         ['Envíos y despachos', '/informacion.html#despachos'],

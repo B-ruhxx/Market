@@ -1,4 +1,4 @@
-﻿// navbar.js - Hidratación y lógica interactiva de la barra de navegación de ELECTRONIX
+// navbar.js - Hidratación y lógica interactiva de la barra de navegación de ELECTRONIX
 
 import { auth } from '../auth.js';
 import { cart } from '../cart.js';
@@ -56,6 +56,7 @@ export function renderNavbar() {
                         Conectado como<br/><strong>${escapeHtml(user.email)}</strong>
                     </div>
                     <a href="/mis-pedidos.html">Mis Pedidos</a>
+                    <a href="/puntos.html">Club Puntos (CMR)</a>
                     ${isAdmin ? `<a href="${auth.inicioAdmin()}" class="elx-admin-link">Panel Administrativo</a>` : ''}
                     <button id="logout-btn" class="elx-logout-btn">Cerrar Sesión</button>
                 </div>
