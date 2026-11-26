@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Electronix · Presentación Proyecto Final · Servicios Cloud</title>
+  <style>
+    :root {
+      --utp-red: #c8102e;
+      --utp-red-dark: #9b0b21;
+      --utp-red-light: #fff1f2;
+      --utp-orange: #d9531e;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-500: #64748b;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --slate-50: #f8fafc;
+      --green-600: #16a34a;
+      --green-50: #f0fdf4;
+      --blue-600: #2563eb;
+      --blue-50: #eff6ff;
+      --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background-color: #0b0f19;
+      color: var(--slate-900);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding: 20px;
+    }
+
+    /* Presentation Stage */
+    #presentation-wrapper {
+      position: relative;
+      width: 1200px;
+      max-width: 95vw;
+      aspect-ratio: 16 / 9;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Fullscreen mode */
+    body.is-fullscreen {
+      padding: 0;
+      background: #000;
+    }
+    body.is-fullscreen #presentation-wrapper {
+      width: 100vw;
+      height: 100vh;
+      max-width: 100vw;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    /* Top Accent Line */
+    .top-accent-bar {
+      height: 6px;
+      width: 100%;
+      background: linear-gradient(90deg, var(--utp-red) 0%, var(--utp-orange) 50%, var(--utp-red) 100%);
+      flex-shrink: 0;
+    }
+
+    /* Slides Container */
+    .slides-container {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 36px 48px 30px 48px;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0;
+      background: #ffffff;
+      transition: opacity 0.25s ease-in-out;
+    }
+
+    .slide.active {
+      display: flex;
+      opacity: 1;
+      z-index: 2;
+    }
+
+    /* Slide Header */
+    .slide-header {
+      margin-bottom: 20px;
+      flex-shrink: 0;
+    }
+
+    .slide-tag {
+      display: inline-block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--utp-red);
+      margin-bottom: 6px;
+    }
+
+    .slide-title {
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: var(--slate-900);
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+
+    .slide-subtitle {
+      font-size: 0.95rem;
+      color: var(--slate-600);
+      margin-top: 4px;
+      font-weight: 400;
+    }
+
+    /* Slide Body */
+    .slide-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 0;
+    }
+
+    /* Slide Footer */
+    .slide-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 14px;
+      margin-top: 10px;
+      border-top: 1px solid var(--slate-200);
+      font-size: 0.78rem;
+      color: var(--slate-500);
+      flex-shrink: 0;
+    }
+
+    .slide-footer .left {
+      font-weight: 500;
+    }
+    .slide-footer .right {
+      font-weight: 600;
+      color: var(--utp-red);
+    }
+
+    /* Typography & Utilities */
+    .highlight-red { color: var(--utp-red); font-weight: 700; }
+    .highlight-bold { font-weight: 700; color: var(--slate-900); }
+
+    /* Cards & Layouts */
+    .card {
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 8px;
+      padding: 16px 20px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    /* Big Metric Cards */
+    .metric-card {
+      background: #ffffff;
+      border: 1px solid var(--slate-200);
+      border-top: 4px solid var(--utp-red);
+      border-radius: 8px;
+      padding: 16px 14px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    }
+
+    .metric-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--slate-900);
+      line-height: 1.1;
+      margin-bottom: 8px;
+      font-feature-settings: "tnum";
+    }
+
+    .metric-label {
+      font-size: 0.85rem;
+      color: var(--slate-600);
+      line-height: 1.35;
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--slate-200);
+      font-size: 0.85rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    thead th {
+      background-color: var(--slate-800);
+      color: #ffffff;
+      padding: 10px 14px;
+      font-weight: 600;
+      font-size: 0.82rem;
+      letter-spacing: 0.02em;
+    }
+
+    tbody td {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--slate-200);
+      color: var(--slate-700);
+      background-color: #ffffff;
+    }
+
+    tbody tr:nth-child(even) td {
+      background-color: var(--slate-50);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Code Blocks */
+    .code-box {
+      background: var(--slate-900);
+      color: #e2e8f0;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      padding: 12px 16px;
+      border-radius: 6px;
+      line-height: 1.45;
+      overflow-x: auto;
+      border: 1px solid #334155;
+    }
+
+    .code-comment { color: #94a3b8; }
+    .code-cmd { color: #38bdf8; font-weight: bold; }
+    .code-arg { color: #a5b4fc; }
+    .code-opt { color: #fde047; }
+    .code-success { color: #4ade80; }
+
+    /* Timeline Badges */
+    .timeline-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      background: var(--slate-100);
+      padding: 10px 14px;
+      border-radius: 8px;
+    }
+
+    .timeline-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      position: relative;
+    }
+
+    .timeline-step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 14px;
+      right: -50%;
+      width: 100%;
+      height: 2px;
+      background: var(--slate-200);
+      z-index: 1;
+    }
+
+    .timeline-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid var(--slate-600);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.78rem;
+      color: var(--slate-800);
+      z-index: 2;
+      margin-bottom: 4px;
+    }
+
+    .timeline-circle.active {
+      background: var(--utp-red);
+      border-color: var(--utp-red);
+      color: #ffffff;
+    }
+
+    .timeline-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--slate-800);
+    }
+
+    .timeline-time {
+      font-size: 0.72rem;
+      color: var(--slate-500);
+    }
+
+    /* Workflow 7 steps */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .step-box {
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 6px;
+      padding: 10px 12px;
+      position: relative;
+    }
+
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      background: var(--slate-800);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .step-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--slate-900);
+      margin-bottom: 4px;
+    }
+
+    .step-desc {
+      font-size: 0.72rem;
+      color: var(--slate-600);
+      font-family: var(--font-mono);
+    }
+
+    /* Architecture Box */
+    .arch-flow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 14px;
+    }
+
+    .arch-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      background: #ffffff;
+      border: 1px solid var(--slate-300);
+      border-radius: 6px;
+      padding: 8px 12px;
+      min-width: 110px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .arch-node.primary {
+      border-color: var(--utp-red);
+      background: var(--utp-red-light);
+    }
+
+    .arch-node .node-type {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--slate-500);
+      margin-bottom: 2px;
+    }
+
+    .arch-node .node-name {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--slate-900);
+    }
+
+    .arch-arrow {
+      color: var(--slate-400);
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
+
+    /* Interactive Presentation Controls */
+    #controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 1200px;
+      max-width: 95vw;
+      margin-top: 14px;
+      color: #cbd5e1;
+      font-size: 0.85rem;
+    }
+
+    .control-btn {
+      background: #1e293b;
+      color: #ffffff;
+      border: 1px solid #334155;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .control-btn:hover {
+      background: #334155;
+      border-color: #475569;
+    }
+
+    .control-btn.active {
+      background: var(--utp-red);
+      border-color: var(--utp-red);
+    }
+
+    .slide-counter {
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    /* Overview modal */
+    #slide-picker {
+      background: #1e293b;
+      color: #fff;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* Print styling */
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      #controls, .top-accent-bar {
+        display: none !important;
+      }
+      #presentation-wrapper {
+        box-shadow: none;
+        max-width: 100%;
+        width: 100%;
+        border-radius: 0;
+      }
+      .slide {
+        position: relative !important;
+        display: flex !important;
+        opacity: 1 !important;
+        page-break-after: always;
+        height: 100vh;
+        width: 100vw;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Presentation Stage -->
+  <div id="presentation-wrapper">
+    <div class="top-accent-bar"></div>
+    <div class="slides-container">
+
+      <!-- SLIDE 1: PORTADA -->
+      <div class="slide active" id="slide-1">
+        <div class="slide-header" style="text-align: center; margin-top: 20px;">
+          <span class="slide-tag" style="font-size: 0.95rem; letter-spacing: 0.12em; background: var(--utp-red-light); padding: 4px 14px; border-radius: 20px; border: 1px solid rgba(200,16,46,0.2);">
+            PROYECTO FINAL · SERVICIOS CLOUD
+          </span>
+          <h1 class="slide-title" style="font-size: 2.3rem; margin-top: 16px; margin-bottom: 10px; color: var(--slate-900);">
+            Plataforma E-Commerce en Google Cloud con Asistente IA para Electronix
+          </h1>
+          <p class="slide-subtitle" style="font-size: 1.15rem; color: var(--slate-600); max-width: 820px; margin: 0 auto;">
+            Propuesta, infraestructura como código (IaC), despliegue de contenedores con TLS y demostración en vivo
+          </p>
+        </div>
+
+        <div class="slide-body" style="align-items: center;">
+          <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 10px; padding: 22px 32px; width: 100%; max-width: 760px; text-align: center;">
+            <div style="margin-bottom: 14px;">
+              <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--slate-500);">Equipo de Desarrollo y Despliegue</span>
+              <p style="font-size: 1.05rem; font-weight: 700; color: var(--slate-800); margin-top: 4px;">
+                Integrante 1 · Integrante 2 · Integrante 3 · Integrante 4
+              </p>
+            </div>
+            <div style="border-top: 1px solid var(--slate-200); padding-top: 12px; display: flex; justify-content: space-around; font-size: 0.85rem; color: var(--slate-600);">
+              <div><strong style="color: var(--slate-800);">Docente:</strong> Mg. Víctor Manuel Ascue Morales</div>
+              <div><strong style="color: var(--slate-800);">Ciclo:</strong> 2026 - Ciclo 2 Agosto</div>
+              <div><strong style="color: var(--slate-800);">Universidad:</strong> UTP</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span class="left">Servicios Cloud · Proyecto Final · Caso Electronix</span>
+          <span class="right">Diapositiva 1 / 15</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 2: AGENDA Y RESPONSABLES -->
+      <div class="slide" id="slide-2">
+        <div class="slide-header">
+          <span class="slide-tag">AGENDA</span>
+          <h2 class="slide-title">Agenda y responsables (15 minutos)</h2>
+          <p class="slide-subtitle">PARTE CENTRAL: propuesta + despliegue + demostración = 12 de 15 minutos</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="timeline-bar">
+            <div class="timeline-step">
+              <div class="timeline-circle active">1</div>
+              <div class="timeline-title">Problema</div>
+              <div class="timeline-time">2 min</div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-circle active">2</div>
+              <div class="timeline-title">Propuesta de solución</div>
+              <div class="timeline-time">5 min</div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-circle active">3</div>
+              <div class="timeline-title">Despliegue</div>
+              <div class="timeline-time">3 min</div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-circle active">4</div>
+              <div class="timeline-title">Demostración en vivo</div>
+              <div class="timeline-time">4 min</div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-circle active">5</div>
+              <div class="timeline-title">Cierre</div>
+              <div class="timeline-time">1 min</div>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 25%;">Bloque</th>
+                  <th style="width: 20%;">Responsable</th>
+                  <th style="width: 12%;">Tiempo</th>
+                  <th>Qué se muestra</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Problema y requisitos</strong></td>
+                  <td>Integrante 1</td>
+                  <td>2 min</td>
+                  <td>Caso Electronix, colapso en campañas de retail y requisitos fundamentales.</td>
+                </tr>
+                <tr>
+                  <td><strong>Propuesta de solución</strong></td>
+                  <td>Integrantes 1 y 2</td>
+                  <td>5 min</td>
+                  <td>Nube Google Cloud, arquitectura IaaS/PaaS, servicios gestionados y costos.</td>
+                </tr>
+                <tr>
+                  <td><strong>Despliegue</strong></td>
+                  <td>Integrante 3</td>
+                  <td>3 min</td>
+                  <td>Infraestructura IaC con Terraform, Docker Compose TLS, evidencias y problemas superados.</td>
+                </tr>
+                <tr>
+                  <td><strong>Demostración en vivo</strong></td>
+                  <td>Integrantes 3 y 4</td>
+                  <td>4 min</td>
+                  <td>Compra en vivo, Asistente Gemini IA, escalabilidad a 2 réplicas y bloqueo 403.</td>
+                </tr>
+                <tr>
+                  <td><strong>Conclusiones</strong></td>
+                  <td>Integrante 4</td>
+                  <td>1 min</td>
+                  <td>Resultados técnicos, lecciones aprendidas y recomendaciones de evolución.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top: 10px; font-size: 0.78rem; color: var(--slate-500); text-align: right;">
+            + 5 minutos de preguntas individuales del docente
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span class="left">Servicios Cloud · Proyecto Final · Caso Electronix</span>
+          <span class="right">Diapositiva 2 / 15</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 3: PROBLEMA -->
+      <div class="slide" id="slide-3">
+        <div class="slide-header">
+          <span class="slide-tag">1 · PROBLEMA</span>
+          <h2 class="slide-title">Electronix: el problema</h2>
+          <p class="slide-subtitle">Saturación tecnológica y pérdida de ventas en retail de alta rotación</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="grid-3" style="margin-bottom: 24px;">
+            <div class="metric-card">
+              <div class="metric-value">15 000</div>
+              <div class="metric-label">clientes activos y catálogo de tecnología de alta demanda</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" style="color: var(--utp-red);">00:00 h</div>
+              <div class="metric-label">el servidor local se satura y colapsa al inicio de Cyber Days</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" style="color: var(--utp-orange);">4.2 h</div>
+              <div class="metric-label">fuera de servicio en el último trimestre por sobrecarga y cortes locales</div>
+            </div>
+          </div>
+
+          <div class="card" style="border-left: 4px solid var(--utp-red);">
+            <h3 style="font-size: 1rem; color: var(--slate-900); margin-bottom: 8px;">Objetivo de la solución</h3>
+            <p style="font-size: 0.9rem; line-height: 1.5; color: var(--slate-700);">
+              Implementar en Google Cloud una plataforma e-commerce moderna, disponible 24/7, con asistente conversacional inteligente impulsado por IA generativa (Gemini), almacenamiento seguro de comprobantes y catálogo, e infraestructura automatizada y resiliente ante picos de demanda.
+            </p>
+            <p style="font-size: 0.85rem; color: var(--slate-600); margin-top: 8px;">
+              <strong>Usuarios objetivos:</strong> Clientes digitales (compras, recomendaciones y catálogo) y Personal administrativo (gestión de stock, órdenes y analítica).
+            </p>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span class="left">Servicios Cloud · Proyecto Final · Caso Electronix</span>
+          <span class="right">Diapositiva 3 / 15</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 4: REQUISITOS FUNDAMENTALES -->
+      <div class="slide" id="slide-4">
+        <div class="slide-header">
+          <span class="slide-tag">1 · REQUISITOS</span>
+          <h2 class="slide-title">Requisitos fundamentales</h2>
+          <p class="slide-subtitle">Métricas claras y verificables para garantizar el éxito del negocio</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 30%;">Requisito</th>
+                  <th style="width: 32%;">Métrica fundamental</th>
+                  <th style="width: 38%;">¿Cómo lo comprobamos?</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Operación continua 24/7</strong></td>
+                  <td>99.9% de disponibilidad mensual</td>
+                  <td>Monitoreo de Uptime y alertas activas en tiempo real</td>
+                </tr>
+                <tr>
+                  <td><strong>Soportar picos de Cyber Days</strong></td>
+                  <td>Hasta 10x el tráfico regular sin caídas</td>
+                  <td>Prueba P2: escalado horizontal de contenedores en caliente</td>
+                </tr>
+                <tr>
+                  <td><strong>Respuesta rápida al usuario</strong></td>
+                  <td>Menos de 1 segundo (meta real: &lt; 500 ms)</td>
+                  <td>Prueba P1: navegación de catálogo, carrito y checkout</td>
+                </tr>
+                <tr>
+                  <td><strong>Protección de datos y catálogo</strong></td>
+                  <td>Sin accesos públicos a DB; Ley N.° 29733</td>
+                  <td>Prueba P4: Cloud SQL en IP privada (10.98.0.3) y 403 en Actuator</td>
+                </tr>
+                <tr>
+                  <td><strong>Costo mensual controlado</strong></td>
+                  <td>≤ US$ 130 al mes (presupuesto cloud)</td>
+                  <td>Calculadora oficial de GCP y facturación real (~$47-$50/mes)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="margin-top: 14px; background: var(--slate-100); padding: 10px 14px; border-radius: 6px; font-size: 0.8rem; color: var(--slate-600); border-left: 3px solid var(--slate-500);">
+            <strong>Criterio de evaluación:</strong> Pocas métricas: solo las fundamentales; cada una se atiende en la propuesta arquitectónica y se comprueba en la demostración en vivo.
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span class="left">Servicios Cloud · Proyecto Final · Caso Electronix</span>
+          <span class="right">Diapositiva 4 / 15</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 5: PROPUESTA DE SOLUCIÓN -->
+      <div class="slide" id="slide-5">
+        <div class="slide-header">
+          <span class="slide-tag">2 · PROPUESTA DE SOLUCIÓN</span>
+          <h2 class="slide-title">Nuestra propuesta en la nube</h2>
+          <p class="slide-subtitle">Arquitectura elástica, segura y asistida por IA en Google Cloud Platform</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="grid-2">
+            <div class="card" style="border-top: 3px solid var(--utp-red);">
+              <h3 style="font-size: 1.05rem; color: var(--slate-900); margin-bottom: 10px;">La solución implementada</h3>
+              <ul style="list-style: none; font-size: 0.85rem; line-height: 1.7; color: var(--slate-700);">
+                <li><strong>Qué:</strong> Plataforma web e-commerce con Asistente Virtual Inteligente (Gemini AI).</li>
+                <li><strong>Proveedor:</strong> Google Cloud Platform (GCP).</li>
+                <li><strong>Región:</strong> <code>us-central1</code> (Iowa), alta disponibilidad de cuotas Compute, SQL y Gemini.</li>
+                <li><strong>Modelo:</strong> Híbrido IaaS + PaaS gestionado (Compute Engine + Cloud SQL PostgreSQL 16 + Cloud Storage).</li>
+                <li><strong>Servicios:</strong> Compute Engine · Cloud SQL · Cloud Storage · Cloud NAT · Gemini API.</li>
+              </ul>
+            </div>
+
+            <div class="card" style="border-top: 3px solid var(--utp-orange);">
+              <h3 style="font-size: 1.05rem; color: var(--slate-900); margin-bottom: 10px;">¿Por qué la nube?</h3>
+              <ul style="list-style: none; font-size: 0.85rem; line-height: 1.7; color: var(--slate-700);">
+                <li><strong>Cero hardware local:</strong> Sin riesgo de apagones, hardware defectuoso o cuellos de botella físicos.</li>
+                <li><strong>Escalabilidad elástica:</strong> Capacidad de duplicar instancias en segundos ante tráfico intenso.</li>
+                <li><strong>Pago por uso:</strong> Aprovisionamiento exacto mediante Infraestructura como Código (Terraform).</li>
+                <li><strong>Foco en el negocio:</strong> Google opera la resiliencia de la base de datos; el equipo se enfoca en la tienda y la IA.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div style="margin-top: 16px; background: var(--utp-red-light); border: 1px solid rgba(200,16,46,0.2); border-radius: 8px; padding: 12px 18px; font-size: 0.85rem; color: var(--utp-red-dark); font-weight: 500;">
+            <strong>Antes → Después:</strong> Servidor local saturado sin IA y con caídas en campañas → Plataforma Cloud 24/7 con HTTPS, base de datos privada en VPC Peering y Asistente Gemini integrado.
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span class="left">Servicios Cloud · Proyecto Final · Caso Electronix</span>
+          <span class="right">Diapositiva 5 / 15</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 6: ARQUITECTURA DE LA SOLUCIÓN -->
+      <div class="slide" id="slide-6">
+        <div class="slide-header">
+          <span class="slide-tag">2 · PROPUESTA DE SOLUCIÓN</span>
+          <h2 class="slide-title">Arquitectura de la solución</h2>
+          <p class="slide-subtitle">Recorrido de una compra y consulta interactiva con IA en Google Cloud (us-central1)</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="arch-flow">
+            <div class="arch-node">
+              <span class="node-type">Cliente</span>
+              <span class="node-name">Navegador Web</span>
+            </div>
+            <span class="arch-arrow">→</span>
+            <div class="arch-node primary">
+              <span class="node-type">TLS 1.3 / SSL</span>
+              <span class="node-name">Caddy 2.8</span>
+            </div>
+            <span class="arch-arrow">→</span>
+            <div class="arch-node">
+              <span class="node-type">Reverse Proxy</span>
+              <span class="node-name">Nginx</span>
+            </div>
+            <span class="arch-arrow">→</span>
+            <div class="arch-node primary">
+              <span class="node-type">Backend App</span>
+              <span class="node-name">Spring Boot 3.3.4</span>
+            </div>
+            <span class="arch-arrow">→</span>
+            <div class="arch-node">
+              <span class="node-type">VPC Peering</span>
+              <span class="node-name">Cloud SQL 16</span>
+            </div>
+          </div>
+
+          <div class="grid-2" style="gap: 14px;">
+            <div class="card" style="padding: 12px 16px;">
+              <h4 style="font-size: 0.82rem; text-transform: uppercase; color: var(--utp-red); margin-bottom: 6px;">Flujo de Peticiones y Servicios</h4>
+              <ol style="font-size: 0.78rem; line-height: 1.5; color: var(--slate-700); padding-left: 14px;">
+                <li><strong>HTTPS:</strong> Usuario entra por <code>https://35.222.233.147.sslip.io</code> con Let's Encrypt automático.</li>
+                <li><strong>Caddy & Nginx:</strong> Terminan TLS y balancean peticiones HTTP y WebSockets (/ws-chat).</li>
+                <li><strong>Spring Boot:</strong> Atiende lógica de carrito, pagos, catálogo y orquesta el Asistente IA.</li>
+                <li><strong>Cloud SQL Privado:</strong> Persiste usuarios y órdenes en IP <code>10.98.0.3</code> sin exposición pública.</li>
+              </ol>
+            </div>
+
+            <div class="card" style="padding: 12px 16px;">
+              <h4 style="font-size: 0.82rem; text-transform: uppercase; color: var(--utp-orange); margin-bottom: 6px;">Servicios Auxiliares y Monitoreo</h4>
+              <ol start="5" style="font-size: 0.78rem; line-height: 1.5; color: var(--slate-700); padding-left: 14px;">
+                <li><strong>Redis 7:</strong> Almacena sesiones distribuidas y caché de catálogo en memoria.</li>
+                <li><strong>Cloud Storage:</strong> Bucket <code>electronix-uploads-...</code> para comprobantes e imágenes.</li>
+                <li><strong>Gemini 3.1 Flash-Lite:</strong> LLM para recomendaciones y respuestas inteligentes.</li>
+                <li><strong>Prometheus & Grafana:</strong> Monitoreo de latencia y estado de contenedores en tiempo real.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span class="left">Servicios Cloud · Proyecto Final · Caso Electronix</span>
+          <span class="right">Diapositiva 6 / 15</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 7: SERVICIOS CLOUD Y JUSTIFICACIÓN -->
+      <div class="slide" id="slide-7">
+        <div class="slide-header">
+          <span class="slide-tag">2 · PROPUESTA DE SOLUCIÓN</span>
+          <h2 class="slide-title">Servicios cloud y justificación</h2>
+          <p class="slide-subtitle">Selección técnica fundamentada en resiliencia, seguridad y coste-eficiencia</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 28%;">Servicio Cloud</th>
+                  <th style="width: 32%;">Para qué se usa</th>
+                  <th style="width: 40%;">Por qué este servicio</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Compute Engine (VM)</strong></td>
+                  <td>Alojar el stack de contenedores (App, Redis, Nginx, Caddy)</td>
+                  <td>Flexibilidad IaaS, control granular de red, IP estática <code>35.222.233.147</code> y bajo costo.</td>
+                </tr>
+                <tr>
+                  <td><strong>Cloud SQL (PostgreSQL 16)</strong></td>
+                  <td>Persistencia relacional de clientes, stock y órdenes</td>
+                  <td>Gestionada: backups diarios, IP privada aislada (10.98.0.3), SSL mandatorio y cero mantención de OS.</td>
+                </tr>
+                <tr>
+                  <td><strong>Cloud Storage (GCS)</strong></td>
+                  <td>Imágenes de productos y boletas PDF de compra</td>
+                  <td>Durabilidad del 99.999999999% (11 nueves), URLs firmadas seguras y costo insignificante por GB.</td>
+                </tr>
+                <tr>
+                  <td><strong>Google Gemini AI API</strong></td>
+                  <td>Asistente conversacional de compras en tiempo real</td>
+                  <td>Modelo <code>gemini-3.1-flash-lite</code>: latencia ultra baja, comprensión contextual y fallback automático.</td>
+                </tr>
+                <tr>
+                  <td><strong>Cloud NAT & VPC Peering</strong></td>
+                  <td>Salida a internet de la VM y conexión a Cloud SQL</td>
+                  <td>Permite acceso privado a la DB sin IP pública; máxima protección contra ataques externos.</td>
+                </tr>
+                <tr>
+                  <td><strong>Prometheus & Grafana</strong></td>
+                  <td>Métricas de JVM, latencia HTTP y estado de réplicas</td>
+                  <td>Observabilidad proactiva; endpoint <code>/actuator/prometheus</code> protegido perimetralmente.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span class="left">Servicios Cloud · Proyecto Final · Caso Electronix</span>
+          <span class="right">Diapositiva 7 / 15</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 8: SEGURIDAD, DISPONIBILIDAD Y COSTO -->
+      <div class="slide" id="slide-8">
+        <div class="slide-header">
+          <span class="slide-tag">2 · PROPUESTA DE SOLUCIÓN</span>
+          <h2 class="slide-title">Seguridad, disponibilidad y costo</h2>
+          <p class="slide-subtitle">Alineamiento con normativas de protección y estimación presupuestal mensual</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="grid-2" style="align-items: start;">
+            <!-- Left: Security & Availability -->
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div class="card" style="border-left: 3px solid var(--utp-red); padding: 12px 16px;">
+                <h4 style="font-size: 0.88rem; color: var(--slate-900); margin-bottom: 4px;">Seguridad (Ley N.° 29733)</h4>
+                <p style="font-size: 0.8rem; color: var(--slate-600); line-height: 1.45;">
+                  Service Account con permisos mínimos (<code>roles/storage.objectAdmin</code>), Cloud SQL en red 100% privada sin IP pública, SSL mandatorio (<code>sslmode=require</code>), certificados TLS automáticos y Actuator bloqueado externamente.
+                </p>
+              </div>
+
+              <div class="card" style="border-left: 3px solid var(--utp-orange); padding: 12px 16px;">
+                <h4 style="font-size: 0.88rem; color: var(--slate-900); margin-bottom: 4px;">Disponibilidad (SLA 99.9%)</h4>
+                <p style="font-size: 0.8rem; color: var(--slate-600); line-height: 1.45;">
+                  Infraestructura en Google Cloud con hardware redundante y políticas <code>restart: unless-stopped</code>. Posibilidad de activar Alta Disponibilidad regional en Cloud SQL ante contingencias.
+                </p>
+              </div>
+
+              <div class="card" style="border-left: 3px solid var(--blue-600); padding: 12px 16px;">
+                <h4 style="font-size: 0.88rem; color: var(--slate-900); margin-bottom: 4px;">Escalabilidad Horizontal</h4>
+                <p style="font-size: 0.8rem; color: var(--slate-600); line-height: 1.45;">
+                  Escala de 1 a N réplicas del contenedor Spring Boot en segundos vía Docker Compose y balanceo Nginx, desacoplando sesiones en Redis.
+                </p>
+              </div>
+            </div>
+
+            <!-- Right: Cost Table -->
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Servicio Cloud</th>
+                    <th style="text-align: right; width: 30%;">US$ / mes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Compute Engine (e2-medium, 2 vCPU, 4GB RAM)</td>
+                    <td style="text-align: right; font-weight: 600;">≈ $25.00</td>
+                  </tr>
+                  <tr>
+                    <td>Cloud SQL PostgreSQL 16 (db-f1-micro privado)</td>
+                    <td style="text-align: right; font-weight: 600;">≈ $15.00</td>
+                  </tr>
+                  <tr>
+                    <td>Cloud Storage (GCS comprobantes y catálogo)</td>
+                    <td style="text-align: right; font-weight: 600;">≈ $2.00</td>
+                  </tr>
+                  <tr>
+                    <td>Cloud NAT & Red (IP estática y tráfico egress)</td>
+                    <td style="text-align: right; font-weight: 600;">≈ $5.00</td>
+                  </tr>
+                  <tr>
+                    <td>Gemini AI API (tier de baja latencia)</td>
+                    <td style="text-align: right; font-weight: 600;">≈ $2.00</td>
+                  </tr>
+                  <tr style="background: var(--slate-100); font-weight: bold; border-top: 2px solid var(--slate-300);">
+                    <td style="color: var(--utp-red);">TOTAL ESTIMADO MENSUAL</td>
+                    <td style="text-align: right; color: var(--utp-red); font-size: 1rem;">≈ US$ 49.00</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div style="padding: 8px 12px; font-size: 0.72rem; color: var(--slate-500); background: #fff;">
+                * Cifras estimadas mediante la Calculadora de Precios de GCP. Cumple holgadamente el requisito de presupuesto (≤ US$ 130).
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span class="left">Servicios Cloud · Proyecto Final · Caso Electronix</span>
+          <span class="right">Diapositiva 8 / 15</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 9: DESPLIEGUE EN 7 PASOS -->
+      <div class="slide" id="slide-9">
+        <div class="slide-header">
+          <span class="slide-tag">3 · DESPLIEGUE</span>
+          <h2 class="slide-title">Despliegue en 7 pasos</h2>
+          <p class="slide-subtitle">Entorno: Google Cloud Platform · us-central1 · Terraform IaC · Docker Compose · GitHub</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="steps-grid" style="margin-bottom: 12px;">
+            <div class="step-box">
+              <span class="step-num">1</span>
+              <div class="step-title">Preparar proyecto y APIs</div>
+              <div class="step-desc">gcloud services enable compute, sqladmin, storage, iam</div>
+            </div>
+            <div class="step-box">
+              <span class="step-num">2</span>
+              <div class="step-title">Infraestructura IaC</div>
+              <div class="step-desc">terraform apply (VPC, subredes, Cloud NAT e IP pública)</div>
+            </div>
+            <div class="step-box">
+              <span class="step-num">3</span>
+              <div class="step-title">Cloud SQL Privado</div>
+              <div class="step-desc">Postgres 16 en VPC Peering (IP: 10.98.0.3, SSL activo)</div>
+            </div>
+            <div class="step-box">
+              <span class="step-num">4</span>
+              <div class="step-title">Storage & IAM</div>
+              <div class="step-desc">Bucket GCS y Service Account electronix-backend-sa</div>
+            </div>
+            <div class="step-box">
+              <span class="step-num">5</span>
+              <div class="step-title">Aprovisionar VM</div>
+              <div class="step-desc">electronix-prod-vm con Docker, Compose y Git</div>
+            </div>
+            <div class="step-box">
+              <span class="step-num">6</span>
+              <div class="step-title">Certificados TLS</div>
+              <div class="step-desc">Caddy 2.8 + Let's Encrypt para 35.222.233.147.sslip.io</div>
+            </div>
+            <div class="step-box">
+              <span class="step-num">7</span>
+              <div class="step-title">Despliegue Stack</div>
+              <div class="step-desc">docker compose up -d (Spring Boot, Redis, Nginx, Caddy)</div>
+            </div>
+            <div class="step-box" style="background: var(--green-50); border-color: #86efac;">
+              <span class="step-num" style="background: var(--green-600);">✓</span>
+              <div class="step-title" style="color: #15803d;">Solución en Línea</div>
+              <div class="step-desc" style="color: #166534; font-weight: 600;">HTTPS seguro activo en sslip.io y salud verificada</div>
+            </div>
+          </div>
+
+          <div class="card" style="padding: 10px 16px; background: var(--slate-100); display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.8rem; color: var(--slate-700);"><strong>Evidencia verificada:</strong> Todos los pasos son reproducibles con el código fuente en <code>github.com/B-ruhxx/Market</code></span>
+            <span style="font-size: 0.75rem; background: var(--slate-800); color: #fff; padding: 3px 8px; border-radius: 4px; font-family: var(--font-mono);">branch: main</span>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span class="left">Servicios Cloud · Proyecto Final · Caso Electronix</span>
+          <span class="right">Diapositiva 9 / 15</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 10: COMANDO CLAVE Y EVIDENCIA -->
+      <div class="slide" id="slide-10">
+        <div class="slide-header">
+          <span class="slide-tag">3 · DESPLIEGUE</span>
+          <h2 class="slide-title">Comando clave y evidencia</h2>
+          <p class="slide-subtitle">Automatización de infraestructura y orquestación productiva de contenedores</p>
+        </div>
+
+        <div class="slide-body">
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--slate-700); margin-bottom: 4px;">
+              # 1. Aprovisionamiento reproducible de infraestructura con Terraform
+            </div>
+            <div class="code-box">
+              <span class="code-comment"># Ejecutado en Cloud Shell: crea VPC, subredes, Cloud NAT, VM Ubuntu, Cloud SQL y GCS</span><br>
+              <span class="code-cmd">cd</span> terraform && <span class="code-cmd">terraform</span> init && <span class="code-cmd">terraform</span> apply <span class="code-opt">-auto-approve</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--slate-700); margin-bottom: 4px;">
+              # 2. Despliegue productivo del stack con TLS automático y reverse proxy en VM
+            </div>
+            <div class="code-box">
+              <span class="code-cmd">docker compose</span> <span class="code-opt">-f</span> docker-compose.prod.yml <span class="code-opt">-f</span> docker-compose.tls.yml <span class="code-cmd">up</span> <span class="code-opt">-d --build</span><br>
+              <span class="code-success">[+] Running 6/6</span><br>
+              <span class="code-comment">✔ Container ecommerce-redis    Started (healthy)</span><br>
+              <span class="code-comment">✔ Container ecommerce-app      Started (healthy) [Spring Boot 3.3.4, Java 21]</span><br>
+              <span class="code-comment">✔ Container ecommerce-nginx    Started (healthy) [Reverse Proxy]</span><br>
+              <span class="code-comment">✔ Container ecommerce-caddy    Started (healthy) [Let's Encrypt TLS 1.3]</span>
+            </div>
+          </div>
+
+          <div class="grid-4" style="gap: 10px;">
+            <div class="card" style="padding: 8px 10px; text-align: center; font-size: 0.75rem;">
+              <strong>IaC Terraform</strong><br><span style="color: var(--slate-500);">Aprovisionamiento 100% auditable</span>
+            </div>
+            <div class="card" style="padding: 8px 10px; text-align: center; font-size: 0.75rem;">
+              <strong>TLS Let's Encrypt</strong><br><span style="color: var(--slate-500);">Certificado HTTPS válido</span>
+            </div>
+            <div class="card" style="padding: 8px 10px; text-align: center; font-size: 0.75rem;">
+              <strong>IAM Least Privilege</strong><br><span style="color: var(--slate-500);">Service Account acotada</span>
+            </div>
+            <div class="card" style="padding: 8px 10px; text-align: center; font-size: 0.75rem;">
+              <strong>URL Activa</strong><br><span style="color: var(--green-600); font-weight: 600;">35.222.233.147.sslip.io</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span class="left">Servicios Cloud · Proyecto Final · Caso Electronix</span>
+          <span class="right">Diapositiva 10 / 15</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 11: PROBLEMAS Y CÓMO LOS RESOLVIMOS -->
+      <div class="slide" id="slide-11">
+        <div class="slide-header">
+          <span class="slide-tag">3 · DESPLIEGUE</span>
+          <h2 class="slide-title">Problemas y cómo los resolvimos</h2>
+          <p class="slide-subtitle">Incidentes reales encontrados durante la implementación y su mitigación técnica</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 25%;">Problema</th>
+                  <th style="width: 35%;">Causa Raíz</th>
+                  <th style="width: 40%;">Solución Aplicada</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Error en Terraform por APIs inactivas</strong></td>
+                  <td>El proyecto GCP nuevo no tenía habilitadas por defecto las APIs de Cloud SQL y Service Networking.</td>
+                  <td>Se ejecutó <code>gcloud services enable</code> para SQL Admin, IAM y Service Networking previo al apply.</td>
+                </tr>
+                <tr>
+                  <td><strong>Fallo de autenticación admin tras reinicio</strong></td>
+                  <td>La variable <code>DEMO_SEED_ENABLED=true</code> omitía la inicialización idempotente de usuarios de prueba.</td>
+                  <td>Se ajustó <code>DEMO_SEED_ENABLED=false</code> en <code>.env</code> garantizando la creación persistente de credenciales.</td>
+                </tr>
+                <tr>
+                  <td><strong>Error 503 / Cuota en Gemini API</strong></td>
+                  <td>Saturación temporal en llamadas concurrentes al endpoint principal del modelo generativo.</td>
+                  <td>Se implementó fallback automático al modelo <code>gemini-3.1-flash-lite</code> con reintentos limpios y manejo de errores.</td>
+                </tr>
+                <tr>
+                  <td><strong>Conexión rechazada a Cloud SQL</strong></td>
+                  <td>Aislamiento de red privada sin acceso público y exigencia de certificados seguros.</td>
+                  <td>Se enrutó mediante VPC Peering interno (<code>10.98.0.3</code>) con parámetro JDBC <code>sslmode=require</code>.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="margin-top: 14px; background: var(--slate-100); padding: 10px 14px; border-radius: 6px; font-size: 0.8rem; color: var(--slate-600); border-left: 3px solid var(--utp-red);">
+            <strong>Lección aprendida:</strong> La infraestructura como código y la estricta gestión de variables de entorno (<code>.env</code>) eliminan discrepancias y permiten replicar entornos en minutos.
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span class="left">Servicios Cloud · Proyecto Final · Caso Electronix</span>
+          <span class="right">Diapositiva 11 / 15</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 12: DEMOSTRACIÓN EN VIVO (GUION 4 MIN) -->
+      <div class="slide" id="slide-12">
+        <div class="slide-header">
+          <span class="slide-tag">4 · DEMOSTRACIÓN EN VIVO</span>
+          <h2 class="slide-title">Demostración en vivo (4 minutos)</h2>
+          <p class="slide-subtitle">Guion estructurado y sincronizado de las pruebas de funcionalidad, carga y seguridad</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="grid-2" style="align-items: start;">
+            <!-- Left: 5 steps checklist -->
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div class="card" style="padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <strong style="color: var(--utp-red);">1.</strong> Mostrar recursos en la consola de Google Cloud (VM, SQL privado, VPC)
+                </div>
+                <div style="text-align: right; font-size: 0.75rem; color: var(--slate-500); min-width: 90px;">
+                  <strong>30 s</strong><br>Integrante 3
+                </div>
+              </div>
+
+              <div class="card" style="padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <strong style="color: var(--utp-red);">2.</strong> Flujo de compra completo e interacción con el Asistente Gemini IA
+                </div>
+                <div style="text-align: right; font-size: 0.75rem; color: var(--slate-500); min-width: 90px;">
+                  <strong>1 min</strong><br>Integrante 4
+                </div>
+              </div>
+
+              <div class="card" style="padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <strong style="color: var(--utp-red);">3.</strong> Escalar a 2 réplicas de Spring Boot y verificar balanceo en Nginx
+                </div>
+                <div style="text-align: right; font-size: 0.75rem; color: var(--slate-500); min-width: 90px;">
+                  <strong>1 min</strong><br>Integrante 4
+                </div>
+              </div>
+
+              <div class="card" style="padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <strong style="color: var(--utp-red);">4.</strong> Resiliencia: apagar una réplica y comprobar 0% pérdida de servicio
+                </div>
+                <div style="text-align: right; font-size: 0.75rem; color: var(--slate-500); min-width: 90px;">
+                  <strong>1 min</strong><br>Integrante 3
+                </div>
+              </div>
+
+              <div class="card" style="padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <strong style="color: var(--utp-red);">5.</strong> Prueba de seguridad perimetral: verificar bloqueo 403 a Actuator
+                </div>
+                <div style="text-align: right; font-size: 0.75rem; color: var(--slate-500); min-width: 90px;">
+                  <strong>30 s</strong><br>Integrante 4
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Preparation & Contingency -->
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <div class="card" style="border-top: 3px solid var(--slate-800);">
+                <h4 style="font-size: 0.88rem; color: var(--slate-900); margin-bottom: 8px;">Antes de exponer (Checklist)</h4>
+                <ul style="font-size: 0.8rem; line-height: 1.6; color: var(--slate-700); padding-left: 18px;">
+                  <li>Pila Docker activa y contenedores en estado <code>(healthy)</code>.</li>
+                  <li>Catálogo y productos de prueba sincronizados.</li>
+                  <li>Consola GCP y terminal SSH abiertas en paralelo.</li>
+                  <li>Comandos de prueba listos en portapapeles.</li>
+                </ul>
+              </div>
+
+              <div class="card" style="border-top: 3px solid var(--utp-orange); background: #fffaf0;">
+                <h4 style="font-size: 0.88rem; color: var(--utp-orange); margin-bottom: 8px;">Plan B (Contingencia)</h4>
+                <p style="font-size: 0.8rem; line-height: 1.5; color: var(--slate-700);">
+                  Video grabado de 2 minutos en alta resolución mostrando la ejecución completa de las 5 pruebas y capturas de consola almacenadas en el informe.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span class="left">Servicios Cloud · Proyecto Final · Caso Electronix</span>
+          <span class="right">Diapositiva 12 / 15</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 13: PRUEBAS Y RESULTADOS -->
+      <div class="slide" id="slide-13">
+        <div class="slide-header">
+          <span class="slide-tag">4 · DEMOSTRACIÓN EN VIVO</span>
+          <h2 class="slide-title">Pruebas y resultados</h2>
+          <p class="slide-subtitle">Métricas reales obtenidas sobre la infraestructura activa en Google Cloud</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="grid-4" style="margin-bottom: 16px;">
+            <div class="metric-card">
+              <div class="metric-value">≈ 0.38 s</div>
+              <div class="metric-label"><strong>P1 · Catálogo y Checkout</strong><br>Tiempo de respuesta promedio (meta: &lt; 1 s)</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" style="color: var(--utp-red);">1 → 2</div>
+              <div class="metric-label"><strong>P2 · Escalado Horizontal</strong><br>Réplicas levantadas; 500 peticiones con 200 OK</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" style="color: var(--green-600);">100%</div>
+              <div class="metric-label"><strong>P3 · Resiliencia ante Fallos</strong><br>Disponibilidad al pausar una réplica en vivo</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" style="color: var(--utp-orange);">403</div>
+              <div class="metric-label"><strong>P4 · Seguridad Perimetral</strong><br>Acceso denegado a métricas desde internet público</div>
+            </div>
+          </div>
+
+          <div class="code-box">
+            <span class="code-comment"># P2. Carga concurrente (500 solicitudes con 50 hilos paralelos al endpoint de salud)</span><br>
+            <span class="code-cmd">seq</span> 500 | <span class="code-cmd">xargs</span> <span class="code-opt">-P 50 -I{}</span> curl <span class="code-opt">-s -o /dev/null -w</span> "%{http_code}\n" https://35.222.233.147.sslip.io/actuator/health | <span class="code-cmd">sort</span> | <span class="code-cmd">uniq -c</span><br>
+            <span class="code-success">&nbsp;&nbsp;&nbsp;&nbsp;500 200</span><br><br>
+            <span class="code-comment"># P3. Escalado dinámico en caliente de réplicas de aplicación</span><br>
+            <span class="code-cmd">docker compose</span> <span class="code-opt">-f</span> docker-compose.prod.yml <span class="code-opt">-f</span> docker-compose.tls.yml <span class="code-cmd">up</span> <span class="code-opt">-d --scale ecommerce-app=2</span>
+          </div>
+          <div style="margin-top: 8px; font-size: 0.72rem; color: var(--slate-500); text-align: center;">
+            Resultados medidos en producción (Host: 35.222.233.147.sslip.io · Cloud SQL IP: 10.98.0.3)
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span class="left">Servicios Cloud · Proyecto Final · Caso Electronix</span>
+          <span class="right">Diapositiva 13 / 15</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 14: CONCLUSIONES Y RECOMENDACIONES -->
+      <div class="slide" id="slide-14">
+        <div class="slide-header">
+          <span class="slide-tag">5 · CONCLUSIONES</span>
+          <h2 class="slide-title">Conclusiones y recomendaciones</h2>
+          <p class="slide-subtitle">Evaluación técnica integral del proyecto y hoja de ruta arquitectónica</p>
+        </div>
+
+        <div class="slide-body">
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;">
+            <div class="card" style="border-left: 4px solid var(--utp-red); padding: 10px 14px;">
+              <strong style="color: var(--utp-red);">1. Propuesta:</strong> La arquitectura basada en Google Cloud (Compute Engine + Cloud SQL + GCS + Gemini AI) resolvió eficazmente la saturación por tráfico estacional y dotó a la tienda de capacidades inteligentes por menos de US$ 50 al mes.
+            </div>
+            <div class="card" style="border-left: 4px solid var(--utp-orange); padding: 10px 14px;">
+              <strong style="color: var(--utp-orange);">2. Despliegue:</strong> La infraestructura como código (Terraform) y la orquestación en Docker Compose garantizaron un despliegue 100% reproducible, sin exponer la base de datos a internet y con cifrado TLS 1.3 automático.
+            </div>
+            <div class="card" style="border-left: 4px solid var(--green-600); padding: 10px 14px;">
+              <strong style="color: var(--green-600);">3. Demostración:</strong> Las cuatro pruebas en vivo validaron latencias de respuesta &lt; 400 ms, escalabilidad horizontal elástica, alta disponibilidad ante fallos y estricta seguridad perimetral.
+            </div>
+          </div>
+
+          <div class="card" style="background: var(--slate-100); border: 1px dashed var(--slate-400); padding: 12px 16px;">
+            <h4 style="font-size: 0.85rem; color: var(--slate-900); margin-bottom: 6px;">Recomendaciones para Producción a Gran Escala</h4>
+            <p style="font-size: 0.8rem; line-height: 1.5; color: var(--slate-700);">
+              <strong>(1)</strong> Migrar la carga de trabajo a Google Kubernetes Engine (GKE) o Cloud Run para auto-escalado horizontal automático basado en métricas de CPU/solicitudes; <strong>(2)</strong> Activar Google Cloud Armor como WAF contra ataques DDoS e incorporar Cloud CDN para acelerar la entrega de catálogo e imágenes en el edge.
+            </p>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span class="left">Servicios Cloud · Proyecto Final · Caso Electronix</span>
+          <span class="right">Diapositiva 14 / 15</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 15: GRACIAS Y PREGUNTAS -->
+      <div class="slide" id="slide-15">
+        <div class="slide-header" style="text-align: center; margin-top: 15px;">
+          <span class="slide-tag" style="background: var(--utp-red-light); padding: 4px 14px; border-radius: 20px; border: 1px solid rgba(200,16,46,0.2);">
+            CIERRE DE SESIÓN
+          </span>
+          <h1 class="slide-title" style="font-size: 2.8rem; margin-top: 14px; margin-bottom: 8px;">
+            ¡Muchas Gracias!
+          </h1>
+          <p class="slide-subtitle" style="font-size: 1.3rem; color: var(--utp-red); font-weight: 700;">
+            ¿Preguntas o comentarios?
+          </p>
+        </div>
+
+        <div class="slide-body" style="align-items: center;">
+          <div class="grid-2" style="width: 100%; max-width: 820px; gap: 16px;">
+            <div class="card" style="text-align: center; border-top: 3px solid var(--utp-red); padding: 18px;">
+              <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--slate-500); margin-bottom: 8px;">Repositorio del Proyecto</h4>
+              <p style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--slate-900); font-weight: 700;">
+                github.com/B-ruhxx/Market
+              </p>
+              <span style="display: inline-block; margin-top: 6px; font-size: 0.75rem; color: var(--slate-500);">
+                Código fuente, Terraform IaC y configuración Docker
+              </span>
+            </div>
+
+            <div class="card" style="text-align: center; border-top: 3px solid var(--green-600); padding: 18px;">
+              <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--slate-500); margin-bottom: 8px;">Despliegue Activo en Producción</h4>
+              <p style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--green-600); font-weight: 700;">
+                https://35.222.233.147.sslip.io
+              </p>
+              <span style="display: inline-block; margin-top: 6px; font-size: 0.75rem; color: var(--slate-500);">
+                Certificado TLS Let's Encrypt / Google Cloud us-central1
+              </span>
+            </div>
+          </div>
+
+          <div style="margin-top: 20px; font-size: 0.75rem; color: var(--slate-500); text-align: center; max-width: 780px; line-height: 1.45;">
+            <strong>Referencias Bibliográficas (APA 7):</strong> Google Cloud Platform (2024). <em>Compute Engine & Cloud SQL Architecture Guide</em>; VMware Inc. (2024). <em>Spring Boot 3.3.4 Production Reference</em>; HashiCorp (2024). <em>Terraform Google Cloud Provider Documentation</em>; Congreso de la República del Perú (2011). <em>Ley N.° 29733: Ley de Protección de Datos Personales</em>.
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span class="left">Servicios Cloud · Proyecto Final · Caso Electronix</span>
+          <span class="right">Diapositiva 15 / 15</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Interactive Controls Bar -->
+  <div id="controls">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <button class="control-btn" id="prev-btn" title="Diapositiva Anterior (Flecha Izquierda / RePág)">
+        ← Anterior
+      </button>
+      <button class="control-btn" id="next-btn" title="Siguiente Diapositiva (Flecha Derecha / Espacio / AvPág)">
+        Siguiente →
+      </button>
+      <span class="slide-counter" id="slide-indicator">1 / 15</span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <label for="slide-picker" style="font-size: 0.8rem; color: #94a3b8;">Saltar a:</label>
+      <select id="slide-picker">
+        <option value="1">1. Portada</option>
+        <option value="2">2. Agenda y responsables</option>
+        <option value="3">3. Problema (Electronix)</option>
+        <option value="4">4. Requisitos fundamentales</option>
+        <option value="5">5. Propuesta de solución</option>
+        <option value="6">6. Arquitectura de la solución</option>
+        <option value="7">7. Servicios cloud y justificación</option>
+        <option value="8">8. Seguridad, disponibilidad y costo</option>
+        <option value="9">9. Despliegue en 7 pasos</option>
+        <option value="10">10. Comando clave y evidencia</option>
+        <option value="11">11. Problemas y soluciones</option>
+        <option value="12">12. Demostración en vivo</option>
+        <option value="13">13. Pruebas y resultados</option>
+        <option value="14">14. Conclusiones y recomendaciones</option>
+        <option value="15">15. Preguntas y Cierre</option>
+      </select>
+
+      <button class="control-btn" id="fullscreen-btn" title="Alternar Pantalla Completa (F)">
+        ⛶ Pantalla Completa
+      </button>
+    </div>
+  </div>
+
+  <!-- JavaScript Slide Controller -->
+  <script>
+    (function() {
+      const totalSlides = 15;
+      let currentSlide = 1;
+
+      const slides = document.querySelectorAll('.slide');
+      const prevBtn = document.getElementById('prev-btn');
+      const nextBtn = document.getElementById('next-btn');
+      const indicator = document.getElementById('slide-indicator');
+      const picker = document.getElementById('slide-picker');
+      const fullscreenBtn = document.getElementById('fullscreen-btn');
+
+      function showSlide(index) {
+        if (index < 1) index = 1;
+        if (index > totalSlides) index = totalSlides;
+
+        slides.forEach((s, idx) => {
+          if (idx + 1 === index) {
+            s.classList.add('active');
+          } else {
+            s.classList.remove('active');
+          }
+        });
+
+        currentSlide = index;
+        indicator.textContent = `${currentSlide} / ${totalSlides}`;
+        picker.value = currentSlide;
+
+        prevBtn.disabled = (currentSlide === 1);
+        nextBtn.disabled = (currentSlide === totalSlides);
+        prevBtn.style.opacity = currentSlide === 1 ? '0.4' : '1';
+        nextBtn.style.opacity = currentSlide === totalSlides ? '0.4' : '1';
+      }
+
+      function nextSlide() {
+        if (currentSlide < totalSlides) {
+          showSlide(currentSlide + 1);
+        }
+      }
+
+      function prevSlide() {
+        if (currentSlide > 1) {
+          showSlide(currentSlide - 1);
+        }
+      }
+
+      function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(err => {
+            console.warn(`Error trying to enable fullscreen: ${err.message}`);
+          });
+          document.body.classList.add('is-fullscreen');
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          }
+          document.body.classList.remove('is-fullscreen');
+        }
+      }
+
+      document.addEventListener('fullscreenchange', () => {
+        if (document.fullscreenElement) {
+          document.body.classList.add('is-fullscreen');
+        } else {
+          document.body.classList.remove('is-fullscreen');
+        }
+      });
+
+      // Events
+      prevBtn.addEventListener('click', prevSlide);
+      nextBtn.addEventListener('click', nextSlide);
+      picker.addEventListener('change', (e) => {
+        showSlide(parseInt(e.target.value, 10));
+      });
+      fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+      // Keyboard navigation
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+          e.preventDefault();
+          nextSlide();
+        } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+          e.preventDefault();
+          prevSlide();
+        } else if (e.key === 'Home') {
+          e.preventDefault();
+          showSlide(1);
+        } else if (e.key === 'End') {
+          e.preventDefault();
+          showSlide(totalSlides);
+        } else if (e.key === 'f' || e.key === 'F') {
+          e.preventDefault();
+          toggleFullscreen();
+        }
+      });
+
+      // Initialize
+      showSlide(1);
+    })();
+  </script>
+</body>
+</html>
