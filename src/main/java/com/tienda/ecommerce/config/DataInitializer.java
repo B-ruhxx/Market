@@ -13,6 +13,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -28,7 +29,7 @@ public class DataInitializer implements CommandLineRunner {
     @Value("${ADMIN_PASSWORD:}")
     private String adminPassword;
 
-    @Value("${ADMIN_EMAIL:Admin@gmail.com}")
+    @Value("${ADMIN_EMAIL:admin@gmail.com}")
     private String adminEmail;
 
     @Value("${CLIENTE_PASSWORD:}")
@@ -38,6 +39,9 @@ public class DataInitializer implements CommandLineRunner {
     private final ProductoRepository productoRepository;
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private jakarta.persistence.EntityManager entityManager;
 
     public DataInitializer(
             CategoriaRepository categoriaRepository,
@@ -52,7 +56,9 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     @Override
+    @Transactional
     public void run(String... args) {
+        adquirirLockPostgreSqlSiAplica();
         // Los datos demo crean su propio catálogo de 200 productos exactos.
         // Este catálogo mínimo queda reservado para instalaciones sin demo.
         if (!demoSeedEnabled && categoriaRepository.count() == 0) {
@@ -148,11 +154,26 @@ public class DataInitializer implements CommandLineRunner {
             admin.setEmail(email);
             if (!passwordEncoder.matches(adminPassword, admin.getPasswordHash())) {
                 admin.setPasswordHash(passwordEncoder.encode(adminPassword));
+                admin.setPasswordModificadoEn(java.time.LocalDateTime.now());
             }
             admin.setActivo(true);
         }
 
         usuarioRepository.save(admin);
+    }
+
+    private void adquirirLockPostgreSqlSiAplica() {
+        if (entityManager == null) {
+            return;
+        }
+        entityManager.unwrap(org.hibernate.Session.class).doWork(conn -> {
+            String productoDb = conn.getMetaData().getDatabaseProductName();
+            if (productoDb != null && productoDb.toLowerCase(Locale.ROOT).contains("postgres")) {
+                try (java.sql.Statement st = conn.createStatement()) {
+                    st.execute("SELECT pg_advisory_xact_lock(8842100)");
+                }
+            }
+        });
     }
 
     private String normalizarEmailAdministrador() {

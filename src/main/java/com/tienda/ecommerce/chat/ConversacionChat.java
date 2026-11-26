@@ -16,8 +16,12 @@ import org.hibernate.annotations.Check;
         @Index(name = "idx_conversacion_estado", columnList = "estado")
     }
 )
-@Check(constraints = "estado IN ('ACTIVA', 'CERRADA', 'ARCHIVADA')")
+@Check(constraints = "estado IN ('ACTIVA', 'CERRADA', 'ARCHIVADA') AND modo_atencion IN ('BOT', 'ESPERANDO_HUMANO', 'HUMANO_ACTIVO')")
 public class ConversacionChat {
+
+    public static final String MODO_BOT = "BOT";
+    public static final String MODO_ESPERANDO_HUMANO = "ESPERANDO_HUMANO";
+    public static final String MODO_HUMANO_ACTIVO = "HUMANO_ACTIVO";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,6 +37,9 @@ public class ConversacionChat {
 
     @Column(nullable = false, length = 30)
     private String estado = "ACTIVA";
+
+    @Column(name = "modo_atencion", nullable = false, length = 25)
+    private String modoAtencion = MODO_BOT;
 
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
@@ -81,6 +88,14 @@ public class ConversacionChat {
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    public String getModoAtencion() {
+        return modoAtencion;
+    }
+
+    public void setModoAtencion(String modoAtencion) {
+        this.modoAtencion = modoAtencion;
     }
 
     public LocalDateTime getFechaCreacion() {

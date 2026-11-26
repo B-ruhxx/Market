@@ -41,10 +41,24 @@ Thumbs.db
 *.key
 *.pem
 *.secret
+gcp-*.json
+*-sa-key.json
+application_default_credentials.json
+secrets/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+.terraform/
 *.log
 logs/
 k8s/*secret*.yaml
+k8s/*secret*.yml
 !k8s/*secret*.yaml.example
+
+### Python / Analítica ###
+__pycache__/
+*.pyc
 
 ### Uploads locales (fondos y PNG de apariencia) ###
 uploads/

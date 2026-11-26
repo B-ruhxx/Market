@@ -644,7 +644,7 @@ public class CrmServiceImpl implements CrmService {
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void acreditarPuntosPorCompra(Pedido pedido) {
         if (pedido == null || pedido.getId() == null || pedido.getUsuario() == null) {
             return;
@@ -725,7 +725,7 @@ public class CrmServiceImpl implements CrmService {
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void revertirPuntos(Long pedidoId) {
         // Orden determinista por id ascendente (Residual Risk 1)
         List<PuntosTransaccion> transacciones = puntosTransaccionRepository.findByPedidoIdOrderByIdAsc(pedidoId);
@@ -1125,6 +1125,9 @@ public class CrmServiceImpl implements CrmService {
         NivelCliente nivelDefecto = obtenerNivelPorDefecto();
 
         for (Usuario u : usuarios) {
+            if (u.getRol() != null && "ASISTENTE_IA".equals(u.getRol().name())) {
+                continue;
+            }
             PuntosBilletera billetera = billeterasPorUsuario.get(u.getId());
             if (billetera == null) {
                 billetera = new PuntosBilletera(u, 0, nivelDefecto);

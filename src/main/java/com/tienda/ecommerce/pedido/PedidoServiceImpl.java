@@ -232,7 +232,7 @@ public class PedidoServiceImpl implements PedidoService {
                 pedido.getDireccionEnvio(),
                 "Electronix Express Logistics"
         );
-        envio.setNumeroGuia("GUIA-ELX-" + System.currentTimeMillis());
+        envio.setNumeroGuia("GUIA-ELX-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase(java.util.Locale.ROOT));
         pedido.setEnvio(envio);
 
         // Guardar el pedido, detalles, pago y envío en cascada
@@ -261,7 +261,7 @@ public class PedidoServiceImpl implements PedidoService {
         carrito.getItems().clear();
         carritoRepository.save(carrito);
 
-        // Invalidar cache de los productos comprados para evitar inconsistencias de stock (HIGH-01)
+        // Invalidar cache de los productos comprados (diferido afterCommit si transactionAware está activo y degradado si Redis falla)
         if (cacheManager != null) {
             Cache cache = cacheManager.getCache("productos");
             if (cache != null) {
@@ -269,7 +269,12 @@ public class PedidoServiceImpl implements PedidoService {
                 for (DetallePedido detalle : detallesParaEvict) {
                     Producto producto = detalle.getProducto();
                     if (producto != null && producto.getId() != null) {
-                        cache.evict(producto.getId());
+                        try {
+                            cache.evict(producto.getId());
+                        } catch (RuntimeException ex) {
+                            log.error("Error invalidando cache de producto #{} tras pedido #{}: {}",
+                                    producto.getId(), pedidoGuardado.getId(), ex.getMessage());
+                        }
                     }
                 }
             }

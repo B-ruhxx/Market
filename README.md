@@ -14,7 +14,8 @@ Plataforma web integral de comercio electrónico para pequeños y medianos comer
 | **Tiempo Real** | Spring WebSocket con protocolo STOMP sobre SockJS |
 | **Frontend** | HTML5 semántico, CSS3 con Tailwind CSS, JavaScript ES6+ modular |
 | **Construcción** | Apache Maven 3.9+ |
-| **Contenedores** | Docker Compose (aplicación, PostgreSQL 16 y Adminer) |
+| **Contenedores** | Docker Compose (aplicación, PostgreSQL 16, Redis 7, Nginx, Prometheus, Grafana y Adminer) |
+| **Cloud / IaC / K8s** | Google Cloud Storage (`local`/`gcs`), Terraform (VPC, Subred Pública/Privada, Cloud NAT, VM, Cloud SQL, GCS), Kubernetes (`HPA`, `PDB`, `NetworkPolicy`) |
 
 ---
 
@@ -102,7 +103,11 @@ Esto inicia:
 
 - Aplicación: [http://localhost:8090](http://localhost:8090)
 - Adminer: [http://localhost:8091](http://localhost:8091)
-- PostgreSQL 16: puerto `5435` del equipo
+- Grafana (Observabilidad): [http://localhost:3000](http://localhost:3000)
+- Prometheus (TSDB): [http://localhost:9090](http://localhost:9090)
+- PostgreSQL 16: puerto `5435` del equipo | Redis 7: puerto `127.0.0.1:6380`
+
+> Para arquitectura y mapeo completo al programa de Servicios Cloud (Unidades 1, 2 y 3), revisa [docs/alineamiento-programa-cloud.md](docs/alineamiento-programa-cloud.md), [docs/guia-despliegue-cloud.md](docs/guia-despliegue-cloud.md) y [docs/tco-datacenter-vs-cloud.md](docs/tco-datacenter-vs-cloud.md).
 
 Con `DEMO_SEED_ENABLED=true` (valor de la plantilla), una base vacía recibe 50 usuarios, 200 productos y 200 ventas demo. La cuenta demo es `Admin@gmail.com` / `Admin1221:)`; los clientes son `Usuario1@gmail.com` / `User1` hasta `Usuario49@gmail.com` / `User49`. Cambia a `false` para una instalación real y define la cuenta administradora por variables de entorno.
 

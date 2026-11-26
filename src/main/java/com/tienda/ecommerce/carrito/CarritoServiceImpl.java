@@ -71,7 +71,12 @@ public class CarritoServiceImpl implements CarritoService {
                 .findFirst()
                 .orElse(null);
 
-        int cantidadFinal = request.getCantidad() + (itemExistente != null ? itemExistente.getCantidad() : 0);
+        int cantidadFinal;
+        try {
+            cantidadFinal = Math.addExact(request.getCantidad(), itemExistente != null ? itemExistente.getCantidad() : 0);
+        } catch (ArithmeticException ex) {
+            throw new BadRequestException("La cantidad total supera el límite permitido");
+        }
 
         if (producto.getStock() < cantidadFinal) {
             throw new StockInsuficienteException(

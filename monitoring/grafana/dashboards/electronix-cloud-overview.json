@@ -1,0 +1,245 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "electronix-prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        { "expr": "sum(up{job=\"electronix-app\"})", "legendFormat": "Réplicas UP", "refId": "A" }
+      ],
+      "title": "Instancias Activas (UP)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "electronix-prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "s" }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "id": 2,
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        { "expr": "max(process_uptime_seconds{application=\"ecommerce\"})", "legendFormat": "Uptime", "refId": "A" }
+      ],
+      "title": "Tiempo de Actividad (Uptime)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "electronix-prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "reqps" }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "id": 3,
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        { "expr": "sum(rate(http_server_requests_seconds_count{application=\"ecommerce\"}[1m]))", "legendFormat": "RPS", "refId": "A" }
+      ],
+      "title": "Tráfico HTTP (Req/s)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "electronix-prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.01 },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "id": 4,
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        { "expr": "sum(rate(http_server_requests_seconds_count{application=\"ecommerce\",status=~\"5..\"}[1m])) or vector(0)", "legendFormat": "5xx/s", "refId": "A" }
+      ],
+      "title": "Errores HTTP 5xx/s",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "electronix-prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "ms" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "1000 * sum(rate(http_server_requests_seconds_sum{application=\"ecommerce\"}[1m])) / clamp_min(sum(rate(http_server_requests_seconds_count{application=\"ecommerce\"}[1m])), 0.001)",
+          "legendFormat": "Latencia Promedio (ms)",
+          "refId": "A"
+        },
+        {
+          "expr": "1000 * max(http_server_requests_seconds_max{application=\"ecommerce\"})",
+          "legendFormat": "Latencia Máxima (ms)",
+          "refId": "B"
+        }
+      ],
+      "title": "Latencia HTTP (Promedio vs Máxima)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "electronix-prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "id": 6,
+      "targets": [
+        {
+          "expr": "sum(jvm_memory_used_bytes{application=\"ecommerce\",area=\"heap\"})",
+          "legendFormat": "Heap Usado",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(jvm_memory_max_bytes{application=\"ecommerce\",area=\"heap\"})",
+          "legendFormat": "Heap Máximo",
+          "refId": "B"
+        }
+      ],
+      "title": "Memoria JVM Heap",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "electronix-prometheus" },
+      "fieldConfig": {
+        "defaults": { "max": 100, "min": 0, "unit": "percent" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "id": 7,
+      "targets": [
+        {
+          "expr": "avg(process_cpu_usage{application=\"ecommerce\"}) * 100",
+          "legendFormat": "CPU Proceso JVM (%)",
+          "refId": "A"
+        },
+        {
+          "expr": "avg(system_cpu_usage{application=\"ecommerce\"}) * 100",
+          "legendFormat": "CPU Sistema (%)",
+          "refId": "B"
+        }
+      ],
+      "title": "Uso de CPU",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "electronix-prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "id": 8,
+      "targets": [
+        {
+          "expr": "sum(hikaricp_connections_active{application=\"ecommerce\"})",
+          "legendFormat": "Activas",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(hikaricp_connections_idle{application=\"ecommerce\"})",
+          "legendFormat": "Inactivas (Idle)",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(hikaricp_connections_pending{application=\"ecommerce\"})",
+          "legendFormat": "En espera (Pending)",
+          "refId": "C"
+        }
+      ],
+      "title": "Pool de Conexiones PostgreSQL (HikariCP)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "electronix-prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "id": 9,
+      "targets": [
+        {
+          "expr": "sum(rate(cache_gets_total{application=\"ecommerce\",result=\"hit\"}[1m])) or vector(0)",
+          "legendFormat": "Cache Hits / s",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(cache_gets_total{application=\"ecommerce\",result=\"miss\"}[1m])) or vector(0)",
+          "legendFormat": "Cache Misses / s",
+          "refId": "B"
+        }
+      ],
+      "title": "Caché Distribuido Redis (Hits vs Misses)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "electronix-prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "id": 10,
+      "targets": [
+        {
+          "expr": "sum(increase(electronix_auth_bloqueos_total{application=\"ecommerce\"}[5m])) or vector(0)",
+          "legendFormat": "Bloqueos Auth (5m)",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{application=\"ecommerce\",status=~\"4..\"}[1m])) or vector(0)",
+          "legendFormat": "Respuestas 4xx / s",
+          "refId": "B"
+        }
+      ],
+      "title": "Seguridad y Respuestas 4xx / Fuerza Bruta",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["electronix", "cloud", "spring-boot"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30m", "to": "now" },
+  "timezone": "browser",
+  "title": "Electronix Cloud - Observabilidad y SLA",
+  "uid": "electronix-cloud-overview",
+  "version": 1
+}

@@ -48,7 +48,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (jwtService.esTokenValido(jwt)) {
             Long id = jwtService.extraerId(jwt);
             var usuario = id == null ? null : usuarios.findById(id).orElse(null);
-            if (usuario != null && usuario.isActivo() && acceso.rolActivo(usuario)
+            if (usuario != null && usuario.isActivo()
+                    && (usuario.getRol() == null || !"ASISTENTE_IA".equals(usuario.getRol().name()))
+                    && acceso.rolActivo(usuario)
                     && SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 // Revocación: Si la contraseña fue modificada con posterioridad a la emisión del JWT

@@ -1,12 +1,13 @@
 package com.tienda.ecommerce.chat;
 
+import com.tienda.ecommerce.chat.dto.CambiarModoChatRequest;
 import com.tienda.ecommerce.chat.dto.ConversacionResponse;
 import com.tienda.ecommerce.chat.dto.MensajeChatResponse;
 import com.tienda.ecommerce.common.ApiResponse;
 import com.tienda.ecommerce.common.RecursoNoEncontradoException;
-import com.tienda.ecommerce.usuario.Rol;
 import com.tienda.ecommerce.usuario.Usuario;
 import com.tienda.ecommerce.usuario.UsuarioRepository;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -56,5 +57,18 @@ public class ChatRestController {
         boolean esAdmin = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("CHAT_ATENDER"));
         List<MensajeChatResponse> mensajes = chatService.obtenerHistorial(id, usuario.getId(), esAdmin);
         return ResponseEntity.ok(ApiResponse.exito("Historial de mensajes obtenido", mensajes));
+    }
+
+    @PutMapping("/conversaciones/{id}/modo")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<ConversacionResponse>> cambiarModoAtencion(
+            Authentication authentication,
+            @PathVariable Long id,
+            @Valid @RequestBody CambiarModoChatRequest request
+    ) {
+        Usuario usuario = obtenerUsuarioAutenticado(authentication);
+        boolean esAdmin = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("CHAT_ATENDER"));
+        ConversacionResponse actualizada = chatService.cambiarModoAtencion(id, request.getModoAtencion(), usuario.getId(), esAdmin);
+        return ResponseEntity.ok(ApiResponse.exito("Modo de atención actualizado", actualizada));
     }
 }

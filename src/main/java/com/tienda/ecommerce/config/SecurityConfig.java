@@ -2,6 +2,7 @@ package com.tienda.ecommerce.config;
 
 import com.tienda.ecommerce.auth.JwtAuthFilter;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -24,12 +25,14 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final MetricsScrapeAuthFilter metricsScrapeAuthFilter;
 
     @Value("${app.cors.allowed-origins:http://localhost:8080,http://localhost:3000}")
     private String[] allowedOrigins;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, MetricsScrapeAuthFilter metricsScrapeAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.metricsScrapeAuthFilter = metricsScrapeAuthFilter;
     }
 
     @Bean
@@ -49,7 +52,6 @@ public class SecurityConfig {
                                 "/mis-pedidos.html",
                                 "/login.html",
                                 "/registro.html",
-                                "/uploads/**",
                                 "/admin/**",
                                 "/assets/**",
                                 "/static/**",
@@ -68,11 +70,12 @@ public class SecurityConfig {
                                 "/actuator/health/**"
                         ).permitAll()
 
-                        // Endpoints de métricas, info y Prometheus restringidos a roles administrativos
+                        // Endpoints de métricas, info y Prometheus restringidos a roles administrativos o token dedicado de scraping
+                        .requestMatchers("/actuator/prometheus")
+                        .hasAnyAuthority("CONFIGURACION_GESTIONAR", MetricsScrapeAuthFilter.AUTHORITY_METRICS_SCRAPE)
                         .requestMatchers(
                                 "/actuator",
                                 "/actuator/info",
-                                "/actuator/prometheus",
                                 "/actuator/metrics",
                                 "/actuator/metrics/**"
                         ).hasAuthority("CONFIGURACION_GESTIONAR")
@@ -101,26 +104,35 @@ public class SecurityConfig {
                         // Cualquier otra petición requiere autenticación
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(metricsScrapeAuthFilter, JwtAuthFilter.class);
 
         return http.build();
     }
 
     @Bean
+    public FilterRegistrationBean<JwtAuthFilter> jwtFilterRegistration(JwtAuthFilter filter) {
+        FilterRegistrationBean<JwtAuthFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<MetricsScrapeAuthFilter> metricsScrapeFilterRegistration(MetricsScrapeAuthFilter filter) {
+        FilterRegistrationBean<MetricsScrapeAuthFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        List<String> origins = java.util.Arrays.stream(allowedOrigins)
-                .flatMap(s -> java.util.Arrays.stream(s.split(",")))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .toList();
+        List<String> origins = CorsOriginValidator.parseAndValidate(allowedOrigins);
         configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        
-        // Evitar que el comodín universal (*) se combine con credenciales (SEC-02)
-        boolean hasBroadWildcard = origins.stream().anyMatch(o -> o.equals("*"));
-        configuration.setAllowCredentials(!hasBroadWildcard);
+        // La API autentica vía Authorization: Bearer (JWT) y STOMP CONNECT; no usa cookies ni credenciales CORS.
+        configuration.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

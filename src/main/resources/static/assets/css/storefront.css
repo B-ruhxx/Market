@@ -134,3 +134,202 @@
 @media (prefers-reduced-motion: reduce) {
   .store-button, .store-text-link > span { transition: none; }
 }
+
+/* Chat híbrido IA + Soporte humano (acabado minimalista) */
+.elx-visually-hidden:where(:not(:focus-within, :active)) {
+  position: absolute !important;
+  clip-path: inset(50%) !important;
+  overflow: hidden !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  white-space: nowrap !important;
+}
+
+.elx-chat-window {
+  width: 348px;
+  height: 500px;
+}
+
+.elx-chat-head-text {
+  min-width: 0;
+}
+
+.elx-chat-status-dot.is-waiting {
+  background-color: #f59e0b;
+}
+
+.elx-chat-status-dot.is-human {
+  background-color: #10b981;
+}
+
+.elx-chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.elx-chat-escalar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-block-size: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.elx-chat-escalar-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.elx-chat-close {
+  min-inline-size: 28px;
+  min-block-size: 28px;
+  align-items: center;
+  justify-content: center;
+}
+
+.elx-chat-escalar-btn:focus-visible,
+.elx-chat-close:focus-visible,
+.elx-chat-chip:focus-visible,
+.elx-chat-send:focus-visible,
+.elx-chat-toggle:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+.elx-chat-header .elx-chat-escalar-btn:focus-visible,
+.elx-chat-header .elx-chat-close:focus-visible {
+  outline-color: #ffffff;
+}
+
+.elx-chat-escalar-btn.elx-hidden,
+.elx-chat-typing.elx-hidden,
+.elx-chat-chips.elx-hidden {
+  display: none;
+}
+
+.elx-chat-sender {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.elx-chat-ai-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #e8eefb;
+  color: #2A51A5;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.elx-chat-row.elx-bot .elx-chat-bubble {
+  border-left: 2px solid #3564C9;
+  box-shadow: 0 1px 3px rgba(15, 30, 70, 0.06);
+}
+
+.elx-chat-typing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  font-size: 0.72rem;
+  color: #6b7280;
+  background: #f5f6f8;
+  border-top: 1px solid #eceef2;
+}
+
+.elx-typing-dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.elx-typing-dots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #3564C9;
+  animation: elx-typing-bounce 1.2s infinite ease-in-out;
+}
+
+.elx-typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.elx-typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes elx-typing-bounce {
+  0%, 80%, 100% { transform: scale(0.75); opacity: 0.4; }
+  40% { transform: scale(1.1); opacity: 1; }
+}
+
+.elx-chat-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 6px;
+  padding: 8px 12px 6px;
+  background: #ffffff;
+  border-top: 1px solid #eef0f4;
+  scrollbar-width: none;
+}
+
+.elx-chat-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.elx-chat-chip {
+  flex: 0 0 auto;
+  min-block-size: 28px;
+  border: 1px solid #e2e6ef;
+  background: #f8f9fc;
+  color: #374151;
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.elx-chat-chip:hover {
+  background: #eef3fc;
+  border-color: #c7d5f3;
+  color: #2A51A5;
+}
+
+.elx-chat-link {
+  display: inline-block;
+  margin-top: 2px;
+  color: #2A51A5;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .elx-chat-status-dot,
+  .elx-typing-dots span {
+    animation: none;
+  }
+  .elx-chat-escalar-btn,
+  .elx-chat-chip {
+    transition: none;
+  }
+}

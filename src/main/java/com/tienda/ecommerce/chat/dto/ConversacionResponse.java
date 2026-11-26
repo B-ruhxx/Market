@@ -10,6 +10,8 @@ public class ConversacionResponse {
     private Long adminId;
     private String adminNombre;
     private String estado;
+    private String modoAtencion;
+    private boolean iaDisponible;
     private LocalDateTime fechaCreacion;
     private String ultimoMensaje;
 
@@ -17,12 +19,22 @@ public class ConversacionResponse {
     }
 
     public ConversacionResponse(Long id, Long clienteId, String clienteNombre, Long adminId, String adminNombre, String estado, LocalDateTime fechaCreacion, String ultimoMensaje) {
+        this(id, clienteId, clienteNombre, adminId, adminNombre, estado, "BOT", false, fechaCreacion, ultimoMensaje);
+    }
+
+    public ConversacionResponse(Long id, Long clienteId, String clienteNombre, Long adminId, String adminNombre, String estado, String modoAtencion, LocalDateTime fechaCreacion, String ultimoMensaje) {
+        this(id, clienteId, clienteNombre, adminId, adminNombre, estado, modoAtencion, false, fechaCreacion, ultimoMensaje);
+    }
+
+    public ConversacionResponse(Long id, Long clienteId, String clienteNombre, Long adminId, String adminNombre, String estado, String modoAtencion, boolean iaDisponible, LocalDateTime fechaCreacion, String ultimoMensaje) {
         this.id = id;
         this.clienteId = clienteId;
         this.clienteNombre = clienteNombre;
         this.adminId = adminId;
         this.adminNombre = adminNombre;
         this.estado = estado;
+        this.modoAtencion = modoAtencion;
+        this.iaDisponible = iaDisponible;
         this.fechaCreacion = fechaCreacion;
         this.ultimoMensaje = ultimoMensaje;
     }
@@ -73,6 +85,22 @@ public class ConversacionResponse {
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    public String getModoAtencion() {
+        return modoAtencion;
+    }
+
+    public void setModoAtencion(String modoAtencion) {
+        this.modoAtencion = modoAtencion;
+    }
+
+    public boolean isIaDisponible() {
+        return iaDisponible;
+    }
+
+    public void setIaDisponible(boolean iaDisponible) {
+        this.iaDisponible = iaDisponible;
     }
 
     public LocalDateTime getFechaCreacion() {

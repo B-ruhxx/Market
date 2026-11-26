@@ -1,11 +1,15 @@
 services:
+  # Opcional: solo se inicia con `--profile local-db` si no usas Cloud SQL gestionado
   ecommerce-postgres:
     image: postgres:16-alpine
     container_name: electronix-postgres-prod
+    profiles: ["local-db"]
     restart: always
+    security_opt:
+      - no-new-privileges:true
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:?Define POSTGRES_DB en .env}
-      POSTGRES_USER: ${POSTGRES_USER:?Define POSTGRES_USER en .env}
+      POSTGRES_DB: ${POSTGRES_DB:-ecommerce}
+      POSTGRES_USER: ${POSTGRES_USER:-ecommerce_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
     volumes:
       - electronix_postgres_prod_data:/var/lib/postgresql/data
@@ -29,14 +33,18 @@ services:
     image: redis:7-alpine
     container_name: electronix-redis-prod
     restart: always
+    security_opt:
+      - no-new-privileges:true
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Define REDIS_PASSWORD en .env}"]
     volumes:
       - electronix_redis_prod_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?Define REDIS_PASSWORD en .env}", "ping"]
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 5
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Define REDIS_PASSWORD en .env}
     deploy:
       resources:
         limits:
@@ -53,29 +61,43 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: electronix-app-prod
     restart: always
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       ecommerce-postgres:
         condition: service_healthy
+        required: false
+      ecommerce-redis:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SPRING_DATASOURCE_URL: jdbc:postgresql://ecommerce-postgres:5432/${POSTGRES_DB:?Define POSTGRES_DB en .env}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:?Define POSTGRES_USER en .env}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://ecommerce-postgres:5432/${POSTGRES_DB:-ecommerce}}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-${POSTGRES_USER:-ecommerce_user}}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD o SPRING_DATASOURCE_PASSWORD en .env}}
       JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en .env}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-Admin@gmail.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
-      DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-true}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-false}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       SPRING_JPA_SHOW_SQL: "false"
+      APP_STORAGE_TYPE: ${APP_STORAGE_TYPE:-local}
       APP_UPLOAD_DIR: /app/uploads
+      GCP_STORAGE_BUCKET: ${GCP_STORAGE_BUCKET:-}
+      GCP_CREDENTIALS_PATH: ${GCP_CREDENTIALS_PATH:-}
       SPRING_DATA_REDIS_HOST: ecommerce-redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?Define REDIS_PASSWORD en .env}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:80,http://localhost:8090,https://electronix.tudominio.com}
+      PROMETHEUS_SCRAPE_TOKEN: ${PROMETHEUS_SCRAPE_TOKEN:?Define PROMETHEUS_SCRAPE_TOKEN en .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://electronix.tudominio.com}
+      GEMINI_ENABLED: ${GEMINI_ENABLED:-true}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
+      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}
     volumes:
       - electronix_uploads_prod:/app/uploads
+      # Si usas JSON de Service Account en lugar de metadatos de VM GCP, descomenta:
+      # - ./secrets:/app/secrets:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP || exit 1"]
       interval: 10s
@@ -97,6 +119,8 @@ services:
     image: nginx:alpine
     container_name: electronix-nginx-prod
     restart: always
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "80:80"
     volumes:
@@ -104,11 +128,92 @@ services:
     depends_on:
       ecommerce-app:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
     deploy:
       resources:
         limits:
           cpus: "0.25"
           memory: 128M
+    networks:
+      - electronix-internal
+
+  ecommerce-prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: electronix-prometheus-prod
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      PROMETHEUS_SCRAPE_TOKEN: ${PROMETHEUS_SCRAPE_TOKEN:?Define PROMETHEUS_SCRAPE_TOKEN en .env}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        umask 077
+        printf "%s" "$$PROMETHEUS_SCRAPE_TOKEN" > /tmp/scrape_token
+        exec /bin/prometheus \
+          --config.file=/etc/prometheus/prometheus.yml \
+          --storage.tsdb.path=/prometheus \
+          --storage.tsdb.retention.time=15d
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - electronix_prometheus_prod_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      ecommerce-app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+    networks:
+      - electronix-internal
+
+  ecommerce-grafana:
+    image: grafana/grafana:11.3.0
+    container_name: electronix-grafana-prod
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Define GRAFANA_ADMIN_PASSWORD en .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - electronix_grafana_prod_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      ecommerce-prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 192M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
     networks:
       - electronix-internal
 
@@ -120,3 +225,5 @@ volumes:
   electronix_postgres_prod_data:
   electronix_uploads_prod:
   electronix_redis_prod_data:
+  electronix_prometheus_prod_data:
+  electronix_grafana_prod_data:

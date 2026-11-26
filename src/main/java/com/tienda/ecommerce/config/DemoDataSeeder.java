@@ -97,9 +97,13 @@ public class DemoDataSeeder implements CommandLineRunner {
         this.targetConversaciones = targetConversaciones;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private jakarta.persistence.EntityManager entityManager;
+
     @Override
     @Transactional
     public void run(String... args) {
+        adquirirLockPostgreSqlSiAplica();
         if (usuarioRepository.count() > 0 || productoRepository.count() > 0 || pedidoRepository.count() > 0) {
             log.info("DemoDataSeeder: la BD ya contiene datos de negocio; se omite para no duplicar.");
             return;
@@ -119,6 +123,20 @@ public class DemoDataSeeder implements CommandLineRunner {
                 usuarioRepository.count(), productoRepository.count(), pedidoRepository.count());
     }
 
+    private void adquirirLockPostgreSqlSiAplica() {
+        if (entityManager == null) {
+            return;
+        }
+        entityManager.unwrap(org.hibernate.Session.class).doWork(conn -> {
+            String productoDb = conn.getMetaData().getDatabaseProductName();
+            if (productoDb != null && productoDb.toLowerCase(java.util.Locale.ROOT).contains("postgres")) {
+                try (java.sql.Statement st = conn.createStatement()) {
+                    st.execute("SELECT pg_advisory_xact_lock(8842101)");
+                }
+            }
+        });
+    }
+
     // ---------------- usuarios ----------------
 
     private List<Usuario> sembrarUsuarios(Random random) {
@@ -130,7 +148,7 @@ public class DemoDataSeeder implements CommandLineRunner {
                     APELLIDOS[random.nextInt(APELLIDOS.length)],
                     TipoDocumento.DNI,
                     String.format("%08d", 71000000 + i),
-                    String.format("Usuario%d@gmail.com", i), passwordEncoder.encode("User" + i), Rol.CLIENTE, true));
+                    String.format("usuario%d@gmail.com", i), passwordEncoder.encode("User" + i), Rol.CLIENTE, true));
         }
         return usuarioRepository.saveAll(nuevos);
     }
@@ -139,7 +157,7 @@ public class DemoDataSeeder implements CommandLineRunner {
         return usuarioRepository.save(new Usuario(null,
                 "Administrador", "Sistema", null,
                 TipoDocumento.DNI, "00000001",
-                "Admin@gmail.com", passwordEncoder.encode("Admin1221:)"), Rol.ADMIN, true));
+                "admin@gmail.com", passwordEncoder.encode("Admin1221:)"), Rol.ADMIN, true));
     }
 
     // ---------------- categorías y productos ----------------
@@ -298,13 +316,18 @@ public class DemoDataSeeder implements CommandLineRunner {
 
     private void sembrarChat(List<Usuario> clientes, List<Usuario> admins, Random random) {
         List<ConversacionChat> conversaciones = new ArrayList<>();
+        Set<Long> clientesConActiva = new HashSet<>();
         int mensajesTotales = 0;
         for (int i = 0; i < targetConversaciones; i++) {
             Usuario cliente = clientes.get(random.nextInt(clientes.size()));
             Usuario admin = admins.get(random.nextInt(admins.size()));
             int r = random.nextInt(100);
             String estado = r < 50 ? "ACTIVA" : r < 80 ? "CERRADA" : "ARCHIVADA";
+            if ("ACTIVA".equals(estado) && !clientesConActiva.add(cliente.getId())) {
+                estado = "CERRADA";
+            }
             ConversacionChat conv = new ConversacionChat(null, cliente, admin, estado);
+            conv.setModoAtencion(admin != null ? ConversacionChat.MODO_HUMANO_ACTIVO : ConversacionChat.MODO_BOT);
             conv.setFechaCreacion(LocalDateTime.now().minusDays(random.nextInt(30)));
             // El chat es proporcional a la cantidad de usuarios, no otra
             // colección artificial de 200 filas.

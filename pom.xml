@@ -17,6 +17,7 @@
 	<properties>
 		<java.version>21</java.version>
 		<jjwt.version>0.12.6</jjwt.version>
+		<google-cloud-storage.version>2.43.1</google-cloud-storage.version>
 	</properties>
 
 	<dependencies>
@@ -87,11 +88,11 @@
 			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
 
-		<!-- H2 In-Memory Database (for testing / fallback) -->
+		<!-- H2 In-Memory Database (solo para pruebas automatizadas) -->
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
-			<scope>runtime</scope>
+			<scope>test</scope>
 		</dependency>
 
 		<!-- JWT (JSON Web Token) -->
@@ -118,6 +119,13 @@
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
+		</dependency>
+
+		<!-- Google Cloud Storage (Almacenamiento de objetos cloud-native) -->
+		<dependency>
+			<groupId>com.google.cloud</groupId>
+			<artifactId>google-cloud-storage</artifactId>
+			<version>${google-cloud-storage.version}</version>
 		</dependency>
 
 		<!-- Testing Dependencies -->

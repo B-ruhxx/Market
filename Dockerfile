@@ -9,7 +9,13 @@ RUN mvn clean package -DskipTests
 # Stage 2: Runtime Container
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+
+RUN addgroup -S -g 1000 appgroup && adduser -S -u 1000 -G appgroup appuser \
+    && mkdir -p /app/uploads && chown -R appuser:appgroup /app
+
+COPY --from=build --chown=appuser:appgroup /app/target/*.jar app.jar
+
+USER appuser
 
 ENV SPRING_PROFILES_ACTIVE=prod
 ENV SERVER_PORT=8080

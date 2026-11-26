@@ -48,6 +48,16 @@ class SecurityFixesTest {
     }
 
     @Test
+    @DisplayName("Mapa local de LoginAttemptService permanece acotado ante ataques spray")
+    void loginAttemptService_mapaLocalAcotado() {
+        LoginAttemptService rateLimiter = new LoginAttemptService();
+        for (int i = 0; i < 10_500; i++) {
+            rateLimiter.registrarFallo("spray-" + i + "@test.com");
+        }
+        assertTrue(rateLimiter.localTrackedSize() <= 10_000);
+    }
+
+    @Test
     @DisplayName("Actualizar password exige la contraseña actual")
     void actualizarPassword_exigePasswordActual() {
         UsuarioServiceImpl usuarioService = new UsuarioServiceImpl(usuarioRepository, passwordEncoder, accesoService);

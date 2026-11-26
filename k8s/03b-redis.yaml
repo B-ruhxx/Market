@@ -1,3 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: electronix
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -7,6 +19,8 @@ metadata:
     app: redis
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: redis
@@ -15,21 +29,26 @@ spec:
       labels:
         app: redis
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: redis
           image: redis:7-alpine
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command:
             - "sh"
             - "-c"
-            - "redis-server --appendonly yes --requirepass $REDIS_PASSWORD"
+            - 'exec redis-server --appendonly yes --requirepass "$(cat /etc/redis-secret/REDIS_PASSWORD)"'
           ports:
             - containerPort: 6379
-          env:
-            - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: electronix-secrets
-                  key: REDIS_PASSWORD
           resources:
             requests:
               cpu: 50m
@@ -47,6 +66,23 @@ spec:
               port: 6379
             initialDelaySeconds: 5
             periodSeconds: 5
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+            - name: redis-secret
+              mountPath: /etc/redis-secret
+              readOnly: true
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-pvc
+        - name: redis-secret
+          secret:
+            secretName: electronix-redis-secret
+            defaultMode: 0400
+            items:
+              - key: REDIS_PASSWORD
+                path: REDIS_PASSWORD
 ---
 apiVersion: v1
 kind: Service

@@ -1,0 +1,39 @@
+# Overlay HTTPS automático para producción en GCP (Caddy + Let's Encrypt)
+# Sin dominio propio puedes usar nip.io o sslip.io con la IP estática de tu VM:
+#   PUBLIC_DOMAIN=34.123.45.67.sslip.io
+#   CORS_ORIGINS=https://34.123.45.67.sslip.io
+#
+# Despliegue en GCP con HTTPS:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.tls.yml up -d
+# Escalado horizontal conservando HTTPS:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.tls.yml up -d --scale ecommerce-app=2
+
+services:
+  ecommerce-nginx:
+    ports: !override
+      - "127.0.0.1:8088:80"
+
+  ecommerce-caddy:
+    image: caddy:2.8-alpine
+    container_name: electronix-caddy-prod
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?Configura PUBLIC_DOMAIN en .env para habilitar TLS}
+    volumes:
+      - ./nginx/Caddyfile:/etc/caddy/Caddyfile:ro
+      - electronix_caddy_data:/data
+      - electronix_caddy_config:/config
+    depends_on:
+      ecommerce-nginx:
+        condition: service_healthy
+    networks:
+      - electronix-internal
+
+volumes:
+  electronix_caddy_data:
+  electronix_caddy_config:

@@ -23,15 +23,24 @@ public class JwtService {
         this.jwtProperties = jwtProperties;
     }
 
+    @jakarta.annotation.PostConstruct
+    public void validarConfiguracion() {
+        obtenerLlaveFirma();
+    }
+
     private SecretKey obtenerLlaveFirma() {
+        String secret = jwtProperties.getSecret();
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("jwt.secret (JWT_SECRET) no puede estar vacío");
+        }
         byte[] keyBytes;
         try {
-            keyBytes = Decoders.BASE64.decode(jwtProperties.getSecret());
-            if (keyBytes.length < 32) {
-                keyBytes = jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8);
-            }
+            keyBytes = Decoders.BASE64.decode(secret);
         } catch (Exception e) {
-            keyBytes = jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8);
+            keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        }
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException("jwt.secret (JWT_SECRET) debe tener al menos 32 bytes (256 bits) para HS256");
         }
         return Keys.hmacShaKeyFor(keyBytes);
     }
@@ -62,6 +71,10 @@ public class JwtService {
 
     public Date extraerIssuedAt(String token) {
         return extraerClaims(token).getIssuedAt();
+    }
+
+    public Date extraerExpiration(String token) {
+        return extraerClaims(token).getExpiration();
     }
 
     public String extraerEmail(String token) {

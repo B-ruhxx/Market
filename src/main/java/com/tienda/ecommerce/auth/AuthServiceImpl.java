@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthServiceImpl implements AuthService {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AuthServiceImpl.class);
+    private static final String DUMMY_BCRYPT_HASH =
+            new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode("dummy-timing-guard-2026");
 
     private final UsuarioRepository usuarioRepository;
     private final CarritoService carritoService;
@@ -88,9 +90,15 @@ public class AuthServiceImpl implements AuthService {
             }
         }
 
+        if (email.equalsIgnoreCase(com.tienda.ecommerce.chat.ChatServiceImpl.BOT_EMAIL)) {
+            throw new BadRequestException("Ese correo está reservado para el sistema");
+        }
         TipoDocumento tipo = request.getTipoDocumento() != null ? request.getTipoDocumento() : TipoDocumento.DNI;
         String numero = valor(request.getNumeroDocumento());
         validarDocumento(tipo, numero);
+        if ("00000000".equals(numero) || "SYSBOT001".equalsIgnoreCase(numero)) {
+            throw new BadRequestException("Ese número de documento está reservado");
+        }
         if (usuarioRepository.existsByNumeroDocumento(numero)) {
             throw new BadRequestException("Ya existe una cuenta registrada con ese documento");
         }
@@ -123,32 +131,35 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse login(LoginRequest request) {
         String email = request.getEmail().trim().toLowerCase();
 
-        // Control de fuerza bruta / DoS
-        loginAttemptService.verificarBloqueo(email);
+        // Serializa verificacion + BCrypt + conteo de fallos por cuenta para evitar carreras de concurrencia
+        synchronized (loginAttemptService.lockParaClave(email)) {
+            loginAttemptService.verificarBloqueo(email);
 
-        Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
-        if (usuario == null) {
-            loginAttemptService.registrarFallo(email);
-            throw new CredencialesInvalidasException("Credenciales incorrectas: email o contraseña no válidos");
+            Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
+            if (usuario == null) {
+                passwordEncoder.matches(request.getPassword(), DUMMY_BCRYPT_HASH);
+                loginAttemptService.registrarFallo(email);
+                throw new CredencialesInvalidasException("Credenciales incorrectas: email o contraseña no válidos");
+            }
+
+            if (!passwordEncoder.matches(request.getPassword(), usuario.getPasswordHash())) {
+                loginAttemptService.registrarFallo(email);
+                throw new CredencialesInvalidasException("Credenciales incorrectas: email o contraseña no válidos");
+            }
+
+            if (!usuario.isActivo() || (usuario.getRol() != null && "ASISTENTE_IA".equals(usuario.getRol().name()))) {
+                throw new BadRequestException("Tu cuenta se encuentra inactiva. Contacta al administrador.");
+            }
+            if (!acceso.rolActivo(usuario)) throw new BadRequestException("El rol de tu cuenta se encuentra inactivo");
+
+            // Login exitoso: reiniciar contador de fallos
+            loginAttemptService.registrarExito(email);
+
+            String token = jwtService.generarToken(usuario);
+            AuthResponse respuesta = new AuthResponse(token, usuario.getId(), usuario.getNombre(), usuario.getEmail(), usuario.getRol());
+            respuesta.setPermisos(acceso.permisos(usuario));
+            return respuesta;
         }
-
-        if (!usuario.isActivo()) {
-            throw new BadRequestException("Tu cuenta se encuentra inactiva. Contacta al administrador.");
-        }
-        if (!acceso.rolActivo(usuario)) throw new BadRequestException("El rol de tu cuenta se encuentra inactivo");
-
-        if (!passwordEncoder.matches(request.getPassword(), usuario.getPasswordHash())) {
-            loginAttemptService.registrarFallo(email);
-            throw new CredencialesInvalidasException("Credenciales incorrectas: email o contraseña no válidos");
-        }
-
-        // Login exitoso: reiniciar contador de fallos
-        loginAttemptService.registrarExito(email);
-
-        String token = jwtService.generarToken(usuario);
-        AuthResponse respuesta = new AuthResponse(token, usuario.getId(), usuario.getNombre(), usuario.getEmail(), usuario.getRol());
-        respuesta.setPermisos(acceso.permisos(usuario));
-        return respuesta;
     }
 
     private static String valor(String s) {

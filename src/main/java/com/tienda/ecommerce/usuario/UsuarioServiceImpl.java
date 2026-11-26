@@ -44,12 +44,21 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     @Transactional
     public UsuarioResponse crear(CrearUsuarioRequest request) {
+        if (request.getRol() != null && "ASISTENTE_IA".equals(request.getRol().name())) {
+            throw new BadRequestException("El rol ASISTENTE_IA está reservado para el sistema");
+        }
         acceso.validarRol(request.getRol().name());
         String email = request.getEmail().trim().toLowerCase();
+        if (com.tienda.ecommerce.chat.ChatServiceImpl.BOT_EMAIL.equalsIgnoreCase(email)) {
+            throw new BadRequestException("Ese correo está reservado para el sistema");
+        }
         if (usuarioRepository.existsByEmail(email)) {
             throw new BadRequestException("Ya existe un usuario con ese email");
         }
         String doc = request.getNumeroDocumento().trim();
+        if ("SYSBOT001".equalsIgnoreCase(doc) || "00000000".equals(doc)) {
+            throw new BadRequestException("Ese número de documento está reservado para el sistema");
+        }
         if (usuarioRepository.existsByNumeroDocumento(doc)) {
             throw new BadRequestException("Ya existe un usuario con ese documento");
         }
@@ -108,8 +117,15 @@ public class UsuarioServiceImpl implements UsuarioService {
     public UsuarioResponse editar(Long id, EditarUsuarioRequest request) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con id: " + id));
+        if (com.tienda.ecommerce.chat.ChatServiceImpl.BOT_EMAIL.equalsIgnoreCase(usuario.getEmail())
+                || (usuario.getRol() != null && "ASISTENTE_IA".equals(usuario.getRol().name()))) {
+            throw new BadRequestException("La cuenta de asistente del sistema no es editable");
+        }
 
         String email = request.getEmail().trim().toLowerCase();
+        if (com.tienda.ecommerce.chat.ChatServiceImpl.BOT_EMAIL.equalsIgnoreCase(email)) {
+            throw new BadRequestException("Ese correo está reservado para el sistema");
+        }
         if (!email.equalsIgnoreCase(usuario.getEmail()) && usuarioRepository.existsByEmail(email)) {
             throw new BadRequestException("Ya existe un usuario con ese email");
         }
@@ -137,9 +153,15 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     @Transactional
     public UsuarioResponse cambiarRol(Long id, Rol nuevoRol) {
+        if (nuevoRol != null && "ASISTENTE_IA".equals(nuevoRol.name())) {
+            throw new BadRequestException("El rol ASISTENTE_IA está reservado para el sistema");
+        }
         acceso.validarRol(nuevoRol.name());
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con id: " + id));
+        if (com.tienda.ecommerce.chat.ChatServiceImpl.BOT_EMAIL.equalsIgnoreCase(usuario.getEmail())) {
+            throw new BadRequestException("No se puede cambiar el rol de la cuenta del asistente");
+        }
 
         usuario.setRol(nuevoRol);
         Usuario guardado = usuarioRepository.save(usuario);
@@ -151,6 +173,9 @@ public class UsuarioServiceImpl implements UsuarioService {
     public UsuarioResponse cambiarEstado(Long id, boolean activo) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con id: " + id));
+        if (com.tienda.ecommerce.chat.ChatServiceImpl.BOT_EMAIL.equalsIgnoreCase(usuario.getEmail())) {
+            throw new BadRequestException("No se puede cambiar el estado de la cuenta del asistente");
+        }
 
         usuario.setActivo(activo);
         Usuario guardado = usuarioRepository.save(usuario);
@@ -162,6 +187,9 @@ public class UsuarioServiceImpl implements UsuarioService {
     public void eliminar(Long id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con id: " + id));
+        if (com.tienda.ecommerce.chat.ChatServiceImpl.BOT_EMAIL.equalsIgnoreCase(usuario.getEmail())) {
+            throw new BadRequestException("No se puede eliminar la cuenta del asistente");
+        }
         try {
             usuarioRepository.delete(usuario);
             usuarioRepository.flush();
@@ -174,6 +202,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Transactional(readOnly = true)
     public List<UsuarioResponse> listarTodos() {
         return usuarioRepository.findAll().stream()
+                .filter(u -> u.getRol() == null || !"ASISTENTE_IA".equals(u.getRol().name()))
                 .map(this::mapearADto)
                 .toList();
     }

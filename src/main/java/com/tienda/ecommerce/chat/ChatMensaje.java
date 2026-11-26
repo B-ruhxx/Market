@@ -26,7 +26,7 @@ public class ChatMensaje {
     @JoinColumn(name = "remitente_id", nullable = false)
     private Usuario remitente;
 
-    @Column(nullable = false, length = 1000)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String contenido;
 
     @Column(name = "fecha_envio", nullable = false)

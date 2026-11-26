@@ -17,6 +17,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         String loc = Paths.get(uploadDir).toAbsolutePath().normalize().toUri().toString();
+        if (!loc.endsWith("/")) {
+            loc += "/";
+        }
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations(loc)
                 .setCachePeriod(3600);

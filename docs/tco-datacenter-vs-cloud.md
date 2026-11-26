@@ -53,8 +53,8 @@ Para alojar la aplicación Spring Boot, la base de datos PostgreSQL, los archivo
 | :--- | :--- | :---: | :---: | :---: |
 | **Servidor Físico** | Dell PowerEdge R450 / 64GB ECC / SSD NVMe RAID 1 | $3,800 | $300 (Garantía extendida) | $4,700 |
 | **Red y Seguridad** | Switch administrable 24p + Firewall FortiGate 40F | $1,600 | $400 (Licencia de firmas UTM) | $2,800 |
-| **Energía (UPS + Generador)**| UPS On-Line 3kVA APC + Generador diésel 5kVA | $2,900 | $350 (Mantenimiento y combustible) | $3,950 |
-| **Climatización (HVAC)** | Aire de precisión 12,000 BTU + mantenimiento | $1,800 | $450 (Gas refrigerante y filtros) | $3,150 |
+| **Energía (UPS + Generador)**| UPS On-Line 3kVA (2,700 W útiles, carga IT+red ~1.5 kW, autonomía ~30 min) + Generador 5kVA | $2,900 | $350 (Mantenimiento y combustible) | $3,950 |
+| **Climatización (HVAC)** | Aire de precisión 12,000 BTU/h (disipación ~1.5 kW ≈ 5,118 BTU/h + factor de seguridad y envolvente) | $1,800 | $450 (Gas refrigerante y filtros) | $3,150 |
 | **Infraestructura Física** | Rack 42U, PDU monitoreable, sistema FM-200 | $2,200 | $150 (Inspección anual) | $2,650 |
 | **Conectividad Internet** | Fibra simétrica dedicada 100 Mbps empresarial | $0 | $2,160 ($180/mes) | $6,480 |
 | **Consumo Eléctrico** | ~1.5 kW constante = ~1,080 kWh/mes @ $0.16/kWh | $0 | $2,073 ($172.80/mes) | $6,220 |
@@ -71,32 +71,36 @@ En contraste, el modelo Cloud transforma por completo la inversión de capital (
 ┌────────────────────────────────────────────────────────────────────────┐
 │                   SOLUCIÓN CLOUD (GOOGLE CLOUD PLATFORM)               │
 ├────────────────────────────────────────────────────────────────────────┤
-│ 1. Cómputo (Compute Engine):                                           │
+│ 1. Cómputo y Contenedores (Compute Engine):                            │
 │    - 1x Instancia e2-medium (2 vCPU, 4 GB RAM, 30 GB SSD Balanced).   │
+│    - Ejecuta Nginx Reverse Proxy + Spring Boot + Redis + Prometheus    │
+│      + Grafana mediante Docker Compose de producción.                  │
 │                                                                        │
-│ 2. Base de Datos Gestionada (Cloud SQL):                               │
-│    - PostgreSQL 16 (db-f1-micro, 10 GB SSD, backups automáticos).     │
+│ 2. Base de Datos Gestionada (Cloud SQL en red privada):                │
+│    - PostgreSQL 16 (db-f1-micro, 10 GB SSD, PITR y backups diarios).   │
 │                                                                        │
 │ 3. Almacenamiento de Objetos (Cloud Storage):                          │
-│    - Bucket Standard Multi-Region (15 GB multimedia + 5 GB transfer). │
+│    - Bucket Standard Regional (15 GB multimedia + backups + egress).   │
 │                                                                        │
-│ 4. Red Virtual y Seguridad (VPC + Cloud Armor):                        │
+│ 4. Red Virtual y Seguridad (VPC + Cloud NAT + IP Estática):            │
 │    - VPC aislada con Subred Pública y Privada, Cloud NAT y Firewall.   │
 │                                                                        │
 │ 5. Operaciones y Monitoreo:                                            │
-│    - Cloud Logging y Cloud Monitoring incluidos en cuota gratuita.     │
+│    - Prometheus TSDB + Grafana local y Cloud Monitoring / Logging.     │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Presupuesto de Operación en Nube (3 Años)
 
+> Nota de transparencia: los montos corresponden a una estimación referencial para la región `us-central1` y deben validarse con captura de la calculadora oficial vigente de GCP antes de la exposición final (Criterio C2). Si se opta por ejecutar Redis como servicio administrado independiente (Memorystore Basic 1 GB) en lugar de contenedorizado dentro de la VM, se sumarían ~US$ 35/mes adicionales.
+
 | Servicio Cloud | Configuración y Dimensionamiento | Costo Mensual (US$) | Costo a 3 Años (US$) |
 | :--- | :--- | :---: | :---: |
-| **Compute Engine (VM)** | e2-medium (2 vCPU, 4 GB RAM, 30 GB SSD) | $24.82 | $893.52 |
-| **Cloud SQL for PostgreSQL** | db-f1-micro (1 vCPU compartida, 10 GB SSD) | $9.37 | $337.32 |
-| **Cloud Storage (GCS)** | 15 GB Standard Storage + 5 GB Egress | $0.58 | $20.88 |
-| **VPC & Cloud NAT** | 1 NAT Gateway regional + tráfico estándar | $2.45 | $88.20 |
-| **Cloud Monitoring / Logs** | Cuota gratuita mensual (< 50 GB) | $0.00 | $0.00 |
+| **Compute Engine (VM)** | e2-medium (2 vCPU, 4 GB RAM, 30 GB SSD Balanced) | $24.82 | $893.52 |
+| **Cloud SQL for PostgreSQL** | db-f1-micro (1 vCPU compartida, 10 GB SSD, IP privada) | $9.37 | $337.32 |
+| **Cloud Storage (GCS)** | 15 GB Standard Storage + 5 GB Egress + respaldos | $0.58 | $20.88 |
+| **VPC, IP Estática y Cloud NAT** | 1 NAT Gateway regional + IP estática asociada + tráfico estándar | $2.45 | $88.20 |
+| **Monitoreo (Prometheus/Grafana + Cloud Ops)** | Contenedores en VM + cuota gratuita Cloud Logging (< 50 GB) | $0.00 | $0.00 |
 | **TOTAL GENERAL CLOUD** | **Infraestructura elástica en producción** | **US$ 37.22 / mes** | **US$ 1,340.00** |
 
 ---

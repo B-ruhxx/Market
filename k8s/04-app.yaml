@@ -1,3 +1,13 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: electronix-app-sa
+  namespace: electronix
+  # En GKE con Workload Identity, descomenta la anotación y cambia automountServiceAccountToken a true:
+  # annotations:
+  #   iam.gke.io/gcp-service-account: "electronix-backend-sa@TU_PROJECT_ID.iam.gserviceaccount.com"
+automountServiceAccountToken: false
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,10 +29,41 @@ spec:
         prometheus.io/path: "/actuator/prometheus"
         prometheus.io/port: "8080"
     spec:
+      serviceAccountName: electronix-app-sa
+      # Planificación (Semana 12): distribuye réplicas entre distintos nodos para alta disponibilidad
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: ["electronix-app"]
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: electronix-app
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: electronix-app
-          image: electronix-app:latest
+          # En clúster cloud (GKE/EKS) reemplaza por tag/digest inmutable de Artifact Registry
+          image: us-central1-docker.pkg.dev/PROJECT_ID/electronix/app:1.0.0
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8080
           env:
@@ -31,6 +72,21 @@ spec:
                 configMapKeyRef:
                   name: electronix-config
                   key: SPRING_PROFILES_ACTIVE
+            - name: DEMO_SEED_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: electronix-config
+                  key: DEMO_SEED_ENABLED
+            - name: APP_STORAGE_TYPE
+              valueFrom:
+                configMapKeyRef:
+                  name: electronix-config
+                  key: APP_STORAGE_TYPE
+            - name: GCP_STORAGE_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: electronix-config
+                  key: GCP_STORAGE_BUCKET
             - name: APP_UPLOAD_DIR
               valueFrom:
                 configMapKeyRef:
@@ -41,6 +97,27 @@ spec:
                 configMapKeyRef:
                   name: electronix-config
                   key: CORS_ORIGINS
+            - name: GEMINI_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: electronix-config
+                  key: GEMINI_ENABLED
+            - name: GEMINI_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: electronix-config
+                  key: GEMINI_MODEL
+            - name: GEMINI_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: electronix-config
+                  key: GEMINI_BASE_URL
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: electronix-app-secret
+                  key: GEMINI_API_KEY
+                  optional: true
             - name: SPRING_DATASOURCE_URL
               valueFrom:
                 configMapKeyRef:
@@ -54,17 +131,17 @@ spec:
             - name: SPRING_DATASOURCE_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: electronix-secrets
+                  name: electronix-db-secret
                   key: POSTGRES_PASSWORD
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: electronix-secrets
+                  name: electronix-app-secret
                   key: JWT_SECRET
             - name: ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: electronix-secrets
+                  name: electronix-app-secret
                   key: ADMIN_PASSWORD
             - name: SPRING_DATA_REDIS_HOST
               valueFrom:
@@ -79,8 +156,20 @@ spec:
             - name: SPRING_DATA_REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: electronix-secrets
+                  name: electronix-redis-secret
                   key: REDIS_PASSWORD
+            - name: PROMETHEUS_SCRAPE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: electronix-monitoring-secret
+                  key: PROMETHEUS_SCRAPE_TOKEN
+            # Descomentar junto con volumes/volumeMounts si el clúster no usa GKE Workload Identity:
+            # - name: GCP_CREDENTIALS_PATH
+            #   value: "/var/secrets/google/gcp-sa-key.json"
+          # volumeMounts:
+          #   - name: gcp-sa-key
+          #     mountPath: /var/secrets/google
+          #     readOnly: true
           resources:
             requests:
               cpu: 250m
@@ -104,6 +193,14 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 2
+      # volumes:
+      #   - name: gcp-sa-key
+      #     secret:
+      #       secretName: electronix-app-secret
+      #       defaultMode: 0400
+      #       items:
+      #         - key: gcp-sa-key.json
+      #           path: gcp-sa-key.json
 ---
 apiVersion: v1
 kind: Service
